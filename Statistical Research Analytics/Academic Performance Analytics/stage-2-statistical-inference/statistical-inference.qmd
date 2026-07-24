@@ -1,0 +1,599 @@
+---
+title: "Student Performance Analytics: Statistical Inference"
+subtitle: "Evaluating Group Differences and Academic Associations"
+author: "Md Soad Solaiman"
+format: html
+editor: visual
+---
+
+## Executive Summary
+
+This report applies statistical inference to examine how GPA and grade classification vary across selected student characteristics. The analysis retains a **90% confidence level** and corresponding **10% significance level** throughout.
+
+Mean GPA differed across parental-support categories, and the one-way ANOVA provided strong evidence that at least one population mean was different. Tukey-adjusted comparisons identified statistically significant differences for most pairs, with two exceptions: Moderate versus Low support and Very High versus High support.
+
+The analyses did not provide sufficient evidence of differing population mean GPA across ethnicity categories or between male and female students at the selected significance level. Similarly, the chi-squared analysis did not provide sufficient evidence of an association between parental education and grade classification. These non-significant results do not prove equality or independence; they indicate that the sample did not provide sufficient evidence against the corresponding null hypotheses.
+
+## Analytical Framework
+
+The report uses the repository dataset at `data/student-performance-data.csv`. The analytical design comprises:
+
+- a one-way ANOVA and Tukey HSD comparisons for parental support and GPA;
+- a one-way ANOVA for ethnicity and GPA;
+- a pooled equal-variance two-sample t-test for gender and GPA; and
+- a chi-squared test for parental education and grade classification.
+
+The analyses describe population-level evidence represented by this sample under the adopted assumptions. Because the data are observational, group comparisons should be interpreted as associations rather than causal effects.
+
+### Packages and Data Preparation
+
+```{r}
+#| message: false
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+
+portfolio_navy <- "#17324D"
+portfolio_blue <- "#2563A6"
+portfolio_teal <- "#0F766E"
+portfolio_orange <- "#C65D21"
+portfolio_purple <- "#6D5A9E"
+
+theme_set(
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", colour = portfolio_navy),
+      plot.subtitle = element_text(colour = "#5F6F7F"),
+      axis.title = element_text(face = "bold", colour = portfolio_navy),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(colour = "#E5EBF0", linewidth = 0.35),
+      legend.position = "bottom",
+      plot.margin = margin(10, 14, 10, 10)
+    )
+)
+
+# Set significance level
+sig_level <- 0.10
+con_level <- 0.90
+```
+
+```{r}
+student_data <- read_csv("data/student-performance-data.csv",
+  show_col_types = FALSE)
+```
+
+```{r}
+student_data <- student_data %>%
+  mutate(
+    ParentalSupportF = factor(
+      ParentalSupport,
+      levels = c(0, 1, 2, 3, 4),
+      labels = c("None", "Low", "Moderate", "High", "Very High")
+    ),
+    
+    GPA = as.numeric(GPA)
+  )
+```
+
+Parental support is represented as a five-level categorical factor, and GPA is retained as a numerical variable. Encoded categories are converted to meaningful labels before presentation and analysis.
+
+## Confidence and Significance Levels
+
+All inferential decisions use:
+
+- confidence level: **90%**;
+- significance level: **10%**; and
+- decision threshold: \(p < 0.10\).
+
+A statistically significant result indicates evidence against the relevant null hypothesis under the adopted model assumptions. It does not by itself establish practical importance or causation.
+
+## Parental Support and GPA
+
+### Purpose and Hypotheses
+
+The analysis evaluates whether population mean GPA differs across the five parental-support categories.
+
+$$
+H_0: \mu_{\text{None}} = \mu_{\text{Low}} = \mu_{\text{Moderate}} =
+\mu_{\text{High}} = \mu_{\text{Very High}}
+$$
+
+$$
+H_1: \text{At least one parental-support category has a different population mean GPA.}
+$$
+
+### Descriptive Evidence
+
+```{r}
+summary_table <- student_data %>%
+  group_by(ParentalSupportF) %>%
+  summarise(
+    sample_number = n(),
+    mean_GPA = round(mean(GPA, na.rm = TRUE), 2),
+    median_GPA = round(median(GPA, na.rm = TRUE), 2),
+    sd_GPA = round(sd(GPA, na.rm = TRUE), 2)
+  )
+knitr::kable(
+  summary_table,
+  caption = "GPA Summary by Parental-Support Category",
+  col.names = c("Parental Support", "Sample Size", "Mean GPA", "Median GPA", "GPA SD")
+)
+```
+
+Mean and median GPA increase across the ordered parental-support categories in this sample. This descriptive pattern motivates formal comparison but does not establish either statistical significance or causality.
+
+```{r}
+#| label: fig-parental-support-gpa
+#| fig-cap: "Distribution of GPA by parental-support category."
+ggplot(student_data, aes(x = ParentalSupportF, y = GPA)) +
+  geom_boxplot(
+    fill = "#DCEAF4",
+    color = portfolio_blue,
+    linewidth = 0.6,
+    outlier.color = portfolio_blue,
+    width = 0.55
+  ) +
+  labs(
+    title = "GPA by Parental-Support Category",
+    x = "Parental-Support Category",
+    y = "Grade Point Average"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12, margin = margin(b = 10)),
+    axis.title = element_text(size = 10)
+  )
+```
+
+The boxplots show an upward shift in central GPA across the support categories. Within-group dispersion appears broadly similar, while the plotted distributions retain some tail variation.
+
+### Assumptions
+
+The one-way ANOVA requires independent observations, approximately Normal errors within groups, and comparable population variances.
+
+- **Independence:** Each row represents a separate student, but the sampling design and data-collection process are not documented in the available material. Independence is therefore adopted as an analytical assumption rather than treated as verified.
+- **Normality:** The group Q-Q plots are used to assess distributional form. The relatively large group sizes make ANOVA reasonably robust to moderate departures from Normality, although tail departures remain relevant.
+- **Comparable variance:** A ratio of group standard deviations provides a descriptive check of variance similarity.
+
+```{r}
+#| label: fig-parental-support-qq
+#| fig-cap: "Normal Q-Q plots of GPA within parental-support categories."
+ggplot(student_data, aes(sample = GPA)) +
+  stat_qq(color = portfolio_blue, alpha = 0.5, size = 0.8) +
+  stat_qq_line(color = portfolio_orange, linewidth = 0.7) +
+  facet_wrap(~ ParentalSupportF) +
+  labs(
+    title = "GPA Q-Q Plots by Parental-Support Category",
+    x = "Theoretical Normal Quantiles",
+    y = "Observed GPA Quantiles"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", margin = margin(b = 10)),
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.4),
+    strip.background = element_rect(fill = "#f1efe8", color = NA)
+  )
+```
+
+Most observations follow the reference lines through the central portions of the group distributions, with departures in the tails. The diagnostics support approximate rather than exact Normality.
+
+```{r}
+variance_ratio <- max(summary_table$sd_GPA, na.rm = TRUE) /
+  min(summary_table$sd_GPA, na.rm = TRUE)
+
+variance_ratio
+```
+
+The largest-to-smallest standard-deviation ratio is **1.04**, indicating similar observed dispersion across the parental-support categories. This is supportive descriptive evidence for the equal-variance condition, not a formal proof that the population variances are identical.
+
+### ANOVA Result
+
+```{r}
+
+anova_model <- aov(GPA ~ ParentalSupportF, data = student_data)
+
+anova_result <- summary(anova_model)
+anova_result
+```
+
+The ANOVA produced \(F(4,2387)=22.72\) with \(p<2\times10^{-16}\). At the 10% significance level, the null hypothesis is rejected. The sample provides strong evidence that population mean GPA is not equal across all parental-support categories.
+
+This result establishes a statistical difference among group means under the model assumptions. It does not identify which groups differ and does not show that parental support caused the observed differences.
+
+### Tukey HSD Comparisons
+
+```{r}
+tukey_result <- TukeyHSD(anova_model, conf.level = 0.90)
+tukey_result
+```
+
+Tukey HSD provides multiplicity-adjusted pairwise comparisons with a 90% family-wise confidence level. Each reported difference is calculated as the mean of the first-named category minus the mean of the second-named category.
+
+At the 10% significance level, two comparisons were not statistically significant:
+
+- **Moderate − Low:** estimated difference \(0.1285\), adjusted \(p=0.1018\), with a 90% interval spanning zero;
+- **Very High − High:** estimated difference \(0.1491\), adjusted \(p=0.1572\), with a 90% interval spanning zero.
+
+All other reported parental-support pairwise comparisons had adjusted \(p<0.10\). These findings describe differences in mean GPA across support categories but should not be interpreted causally.
+
+## Ethnicity and GPA
+
+### Purpose and Hypotheses
+
+The analysis evaluates whether population mean GPA differs across the four ethnicity categories represented in the dataset.
+
+$$
+H_0: \mu_{\text{Caucasian}} = \mu_{\text{African American}} =
+\mu_{\text{Asian}} = \mu_{\text{Other}}
+$$
+
+$$
+H_1: \text{At least one ethnicity category has a different population mean GPA.}
+$$
+
+### Descriptive Evidence
+
+```{r}
+student_data <- student_data %>%
+  mutate(
+    EthnicityF = factor(
+      Ethnicity,
+      levels = c(0, 1, 2, 3),
+      labels = c("Caucasian", "African American", "Asian", "Other")
+    )
+  )
+```
+
+```{r}
+ethnicity_summary <- student_data %>%
+  group_by(EthnicityF) %>%
+  summarise(
+    sample_number = n(),
+    mean_GPA = mean(GPA, na.rm = TRUE),
+    median_GPA = median(GPA, na.rm = TRUE),
+    sd_GPA = sd(GPA, na.rm = TRUE)
+  )
+
+knitr::kable(
+  ethnicity_summary,
+  caption = "GPA Summary by Ethnicity Category",
+  col.names = c("Ethnicity", "Sample Size", "Mean GPA", "Median GPA", "GPA SD"),
+  digits = 3
+)
+```
+
+The sample means and medians vary slightly across categories. These observed differences require inferential assessment before drawing conclusions about population mean GPA.
+
+```{r}
+#| label: fig-ethnicity-gpa
+#| fig-cap: "Distribution of GPA by ethnicity category."
+ggplot(student_data, aes(x = EthnicityF, y = GPA)) +
+  geom_boxplot(
+    fill = "#CCFBF1",
+    color = portfolio_teal,
+    linewidth = 0.6,
+    outlier.color = portfolio_teal,
+    width = 0.55
+  ) +
+  labs(
+    title = "GPA by Ethnicity Category",
+    x = "Ethnicity Category",
+    y = "Grade Point Average"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12, margin = margin(b = 10)),
+    axis.title = element_text(size = 10)
+  )
+```
+
+The group distributions overlap substantially. Differences in observed sample medians are descriptive and do not establish differences in population means.
+
+### Assumptions
+
+- **Independence:** Separate student records are present, but the sampling process is unknown. Independence is adopted as an assumption and cannot be established from the dataset alone.
+- **Normality:** Q-Q plots show the central portions of the group distributions close to the Normal reference, with departures in the tails. The large group sizes provide some robustness to moderate non-Normality.
+- **Comparable variance:** The observed group standard deviations are compared using their largest-to-smallest ratio.
+
+```{r}
+#| label: fig-ethnicity-qq
+#| fig-cap: "Normal Q-Q plots of GPA within ethnicity categories."
+ggplot(student_data, aes(sample = GPA)) +
+  stat_qq(color = portfolio_teal, alpha = 0.5, size = 0.8) +
+  stat_qq_line(color = portfolio_orange, linewidth = 0.7) +
+  facet_wrap(~ EthnicityF) +
+  labs(
+    title = "GPA Q-Q Plots by Ethnicity Category",
+    x = "Theoretical Normal Quantiles",
+    y = "Observed GPA Quantiles"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 12, margin = margin(b = 10)),
+    axis.title = element_text(size = 10),
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.4),
+    strip.background = element_rect(fill = "#e1f5ee", color = NA)
+  )
+```
+
+The Q-Q plots support approximate Normality through the centre of each distribution, while visible tail departures remain.
+
+```{r}
+ethnicity_variance_ratio <- max(ethnicity_summary$sd_GPA, na.rm = TRUE) /
+  min(ethnicity_summary$sd_GPA, na.rm = TRUE)
+
+ethnicity_variance_ratio
+```
+
+The largest-to-smallest standard-deviation ratio is approximately **1.04**, providing descriptive support for comparable within-group variance.
+
+### ANOVA Result
+
+```{r}
+ethnicity_anova_model <- aov(GPA ~ EthnicityF, data = student_data)
+
+summary(ethnicity_anova_model)
+```
+
+The ANOVA produced \(F(3,2388)=0.958\) with \(p=0.412\). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence that population mean GPA differs across the ethnicity categories represented in the sample.
+
+This result is compatible with no population-level difference at the selected significance level, but it does not prove that all population means are identical.
+
+## Gender and GPA
+
+### Purpose and Hypotheses
+
+The analysis compares population mean GPA for male and female students using the pooled equal-variance two-sample t-test specified in the source analysis.
+
+$$
+H_0: \mu_{\text{Male}} = \mu_{\text{Female}}
+$$
+
+$$
+H_1: \mu_{\text{Male}} \neq \mu_{\text{Female}}
+$$
+
+### Descriptive Evidence
+
+```{r}
+student_data <- student_data %>%
+  mutate(
+    GenderF = factor(Gender, levels = c(0, 1),
+                     labels = c("Male", "Female"))
+  )
+```
+
+```{r}
+g_summary <- student_data %>%
+  group_by(GenderF) %>%
+  summarise(
+    sample_number = n(),
+    mean_GPA = round(mean(GPA, na.rm = TRUE), 2),
+    median_GPA = round(median(GPA, na.rm = TRUE), 2),
+    sd_GPA = round(sd(GPA, na.rm = TRUE), 2)
+  )
+knitr::kable(
+  g_summary,
+  caption = "GPA Summary by Gender",
+  col.names = c("Gender", "Sample Size", "Mean GPA", "Median GPA", "GPA SD")
+)
+```
+
+The observed mean GPA was approximately **1.92** for male students and **1.89** for female students. The sample difference is small and requires inferential evaluation.
+
+```{r}
+#| label: fig-gender-gpa
+#| fig-cap: "Distribution of GPA by gender."
+ggplot(student_data, aes(x = GenderF, y = GPA)) +
+  geom_boxplot(
+    fill = "#F1EAFE",
+    color = portfolio_purple,
+    linewidth = 0.6,
+    outlier.color = portfolio_purple,
+    width = 0.55
+  ) +
+  labs(
+    title = "GPA by Gender",
+    x = "Gender",
+    y = "Grade Point Average"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12, margin = margin(b = 10)),
+    axis.title = element_text(size = 10)
+  )
+```
+
+The distributions overlap substantially and have similar observed spreads. No population-level conclusion follows from the small difference in sample centres alone.
+
+### Assumptions
+
+- **Independence:** Student records are distinct, but independence and random sampling cannot be verified without information about the sampling design.
+- **Normality:** Q-Q plots provide a visual assessment. The two large group sizes make the t-test reasonably robust to moderate departures from Normality, although tail departures are visible.
+- **Equal variance:** The source analysis uses a pooled t-test and therefore assumes equal population variances. Similar sample standard deviations provide descriptive support for that assumption.
+
+```{r}
+#| label: fig-gender-qq
+#| fig-cap: "Normal Q-Q plots of GPA within gender groups."
+ggplot(student_data, aes(sample = GPA)) +
+  stat_qq(color = portfolio_purple, alpha = 0.5, size = 0.8) +
+  stat_qq_line(color = portfolio_orange, linewidth = 0.7) +
+  facet_wrap(~ GenderF) +
+  labs(
+    title = "GPA Q-Q Plots by Gender",
+    x = "Theoretical Normal Quantiles",
+    y = "Observed GPA Quantiles"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13, margin = margin(b = 10)),
+    axis.title = element_text(size = 11),
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.4),
+    strip.background = element_rect(fill = "#f5f5e0", color = NA)
+  )
+```
+
+The Q-Q plots follow the reference lines reasonably closely through their central portions, with departures in both tails. The evidence supports an approximate, not exact, Normality assumption.
+
+```{r}
+variance_ratio_g <- max(g_summary$sd_GPA) /
+  min(g_summary$sd_GPA)
+
+variance_ratio_g
+```
+
+Using the rounded summary standard deviations retained from the source analysis, the largest-to-smallest ratio is **1.00**. This supports similar observed spread, although it does not verify equality of the population variances.
+
+### Pooled Two-Sample t-Test Result
+
+```{r}
+t_test_gender <- t.test(GPA ~ GenderF,
+                        data = student_data,
+                        var.equal = TRUE,
+                        conf.level = 0.90)
+
+t_test_gender
+```
+
+The pooled two-sample t-test produced \(t(2390)=0.6532\) with \(p=0.5137\). The estimated mean GPAs were **1.918679** for male students and **1.894225** for female students. The 90% confidence interval for the male-minus-female mean difference was **−0.03715 to 0.08606**.
+
+The interval includes zero, and the p-value exceeds 0.10. The null hypothesis is therefore not rejected. The sample does not provide sufficient evidence of a population mean GPA difference between male and female students at the selected significance level. This is not proof that the population means are exactly equal.
+
+## Parental Education and Grade Classification
+
+### Purpose and Hypotheses
+
+The analysis evaluates whether parental education and grade classification are associated in the population represented by the sample.
+
+$$
+H_0: \text{Parental education and grade classification are independent.}
+$$
+
+$$
+H_1: \text{Parental education and grade classification are associated.}
+$$
+
+### Descriptive Evidence
+
+```{r}
+student_data <- student_data %>%
+  mutate(
+    ParentalEducationF = factor(
+      ParentalEducation,
+      levels = c(0,1,2,3,4),
+      labels = c("None", "High School", "Some College", "Bachelor", "Higher")
+    ),
+    
+    GradeClassF = factor(
+      GradeClass,
+      levels = c(0,1,2,3,4),
+      labels = c("A", "B", "C", "D", "F")
+    )
+  )
+```
+
+```{r}
+table_pe_grade <- table(student_data$ParentalEducationF, student_data$GradeClassF)
+
+knitr::kable(
+  table_pe_grade,
+  caption = "Grade Classification by Parental-Education Category",
+  col.names = c("A", "B", "C", "D", "F"),
+  row.names = TRUE
+)
+```
+
+The contingency table reports observed student counts for each parental-education and grade-classification combination.
+
+```{r}
+#| label: fig-parental-education-grades
+#| fig-cap: "Grade-classification proportions within parental-education categories."
+ggplot(student_data, aes(x = ParentalEducationF, fill = GradeClassF)) +
+  geom_bar(position = "fill", width = 0.6) +
+  scale_fill_manual(values = c(
+    "#0072B2",
+    "#009E73",
+    "#E69F00",
+    "#D55E00",
+    "#CC79A7"
+  )) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Grade Classification by Parental-Education Category",
+    x = "Parental-Education Category",
+    y = "Students Within Category (%)",
+    fill = "Grade Classification"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12, margin = margin(b = 10)),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10)
+  )
+```
+
+The proportional bars allow the grade distribution to be compared across parental-education categories. Visual differences are descriptive and require formal assessment with the chi-squared test.
+
+### Assumptions
+
+The chi-squared test requires count data in mutually exclusive categories, independent observations, and sufficiently large expected cell counts.
+
+- **Count structure:** Each student contributes to one parental-education category and one grade classification.
+- **Independence:** The dataset contains separate student records, but independence cannot be verified without documentation of the sampling and data-collection design.
+- **Expected counts:** The expected frequencies are calculated directly from the contingency table.
+
+```{r}
+chisq_pe <- chisq.test(table_pe_grade)
+
+knitr::kable(
+  chisq_pe$expected,
+  caption = "Expected Counts Under the Independence Model",
+  col.names = c("A", "B", "C", "D", "F"),
+  row.names = TRUE
+)
+```
+
+All expected cell counts exceed 5, satisfying the conventional expected-count condition for the chi-squared approximation.
+
+### Chi-Squared Test Result
+
+```{r}
+chisq_pe
+```
+
+The test produced \(\chi^2(16)=14.882\) with \(p=0.5333\). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence of an association between parental education and grade classification at the selected significance level.
+
+This result is compatible with independence under the model but does not prove that the variables are independent in the population.
+
+## Key Findings
+
+- Mean GPA differed statistically across parental-support categories: \(F(4,2387)=22.72\), \(p<2\times10^{-16}\).
+- Tukey HSD identified significant differences for most parental-support pairs. Moderate versus Low and Very High versus High were not significant at the 10% level.
+- The ethnicity ANOVA did not provide sufficient evidence of differing population mean GPA: \(F(3,2388)=0.958\), \(p=0.412\).
+- The pooled gender t-test did not provide sufficient evidence of a population mean GPA difference: \(t(2390)=0.6532\), \(p=0.5137\), with a 90% confidence interval of **−0.03715 to 0.08606**.
+- The chi-squared analysis did not provide sufficient evidence of an association between parental education and grade classification: \(\chi^2(16)=14.882\), \(p=0.5333\).
+- Non-significant findings represent insufficient evidence against the null hypotheses, not proof of equality or independence.
+
+## Limitations
+
+The dataset is observational, so the reported group differences and associations do not establish causality. Potential confounding variables may contribute to the observed relationships. The sampling design is not documented in the available material, which limits verification of random sampling, observational independence, and generalisability beyond the analysed records.
+
+The selected 10% significance level permits a higher false-positive probability than the more commonly used 5% threshold. Several hypotheses and pairwise comparisons are examined, creating multiple-testing considerations; Tukey HSD controls family-wise confidence for the parental-support post-hoc comparisons, but the report does not apply a single adjustment across all separate research questions.
+
+Statistical significance does not by itself establish practical importance. Formal effect-size measures were not included in the original analysis, so the magnitude and practical relevance of group differences are not evaluated systematically. Visual diagnostics support approximate distributional assumptions, but they do not prove exact Normality, equal variance, or independence.

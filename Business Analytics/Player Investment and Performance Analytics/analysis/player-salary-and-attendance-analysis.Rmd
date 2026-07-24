@@ -1,0 +1,662 @@
+---
+title: "Carnac Menhirs Player Investment and Performance Analytics"
+subtitle: "Salary, Attendance and Goal-Shooting Decision Support"
+author: "Md Soad Solaiman"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    theme: readable
+---
+
+# Executive Summary
+
+Carnac Menhirs is a proposed team in an upcoming French professional netball league. Its management committee and treasurer are evaluating player remuneration and financial viability under a venue income-sharing arrangement in which increased attendance contributes directly to team income. This case study examines salary patterns across positions and investigates player experience, shooting accuracy and average attendance.
+
+All dollar figures in this report are Australian dollars.
+
+The standard salary budget is approximately AUD 120,000 per player, while up to AUD 500,000 may be considered for an exceptional recruit if supported by strong evidence. The completed workflow cleans 14,000 player-season records, isolates Goal Shooters and applies Box-Cox transformations and linear regression to model transformed shooting accuracy from salary. Point predictions and intervals are reported at the required 97% level.
+
+Age and salary distributions were broadly similar across positions, with marginally higher median salaries for Goal Attack and Goal Shooter. Salary showed no clear relationship with experience, while Goal Shooter salary had a positive association with shooting accuracy in the analysed sample. The fitted salary coefficient was statistically significant and the model had high in-sample explanatory fit. At AUD 330,000, however, the model produced a 100.2% point prediction and a 97% prediction interval extending from approximately 99.6% to 101.0%. Because accuracy above 100% is impossible, this result identifies a limitation of the transformed linear model near the bounded upper limit. It does not by itself show that salary has no predictive relationship.
+
+# Business Context
+
+Carnac Menhirs must allocate salary expenditure across Goal Shooter, Goal Attack, Wing Attack, Centre, Wing Defence, Goal Defence and Goal Keeper. Only Goal Shooter and Goal Attack score goals, with Goal Shooter focused most directly on scoring. Management believes stronger players may improve scoring, increase spectator demand and support commercial returns.
+
+The available data can examine associations among salary, attendance and performance. It cannot estimate income per game or full financial return because it contains no revenue, venue-sharing percentage or cost information.
+
+# Investment Decision
+
+The management committee and treasurer must decide how much analytical evidence should influence player recruitment and salary allocation. The standard salary budget is approximately AUD 120,000 per player, while an exceptional recruit may receive up to AUD 500,000. Any prediction used in this decision must be accompanied by a 97% interval.
+
+# Analytical Questions
+
+- Compare player age and salary distributions across playing positions.
+- Examine salary relationships with experience and average attendance.
+- Analyse Goal Shooter salary, attendance and shooting accuracy.
+- Transform non-linear relationships and fit the completed linear model.
+- Review model assumptions and produce salary-based predictions and 97% intervals.
+- Distinguish evidence useful for recruitment from evidence insufficient for a financial commitment.
+
+# Dataset
+
+The included source is a de-identified player-season dataset with 14,000 rows and nine variables. It records player identifier, date of birth, height, first-class playing experience, salary in purchasing-power-adjusted Australian dollars, position, goals, misses and standardised average attendance. A player may appear in multiple seasons under different identifiers. The documented cleaning workflow removes four invalid records, leaving 13,996 analysis-ready records.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  fig.align = "center",
+  fig.width = 8.5,
+  fig.height = 5.25,
+  dpi = 120
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(moments)
+library(caret)
+library(tidymodels)
+```
+
+```{r load-data}
+nb1 <- read_csv("../data/nbplayers_1.csv", show_col_types = FALSE)
+dim(nb1)
+knitr::kable(
+  head(nb1, 10),
+  caption = "Source player records before cleaning"
+)
+```
+
+# Data Quality and Preparation
+
+## Reproducible ordering and record identifiers
+
+The completed analysis uses a fixed seed to preserve a reproducible row order. A processing record number is then added for tracking cleaning decisions.
+
+```{r reproducible-ordering}
+set.seed(1978974)
+nb1 <- sample_n(nb1, 14000, replace = FALSE)
+nb1 <- mutate(nb1, "prn" = 1:14000) %>%
+  relocate(prn, .before = 1)
+dim(nb1)
+```
+
+## Data quality assessment and cleaning
+
+Source column names are standardised before quality checks. Player identifiers are unique. The review identifies and removes an invalid future birth year, a non-numeric salary, a salary outlier of AUD 1,000,000 and an invalid total of 10,000 goals. One negative height is corrected to its absolute value. Checks of other numeric fields identify no remaining negative values.
+
+```{r standardise-source-names}
+nb1 <- rename(
+  nb1,
+  salary = `$alary`,
+  pos = `POS.`,
+  missed = `MISSUS`,
+  avg_attend = `Av Att`
+)
+
+sum(duplicated(nb1$`U.N.I.`))
+```
+
+```{r inspect-birth-dates}
+knitr::kable(
+  bind_rows(
+    nb1[order(nb1$`DATE of BIRTH`), ][1:5, ],
+    nb1[order(nb1$`DATE of BIRTH`, decreasing = TRUE), ][1:5, ]
+  ),
+  caption = "Earliest and latest recorded birth dates"
+)
+
+nb1 <- nb1[nb1$prn != 12185, ]
+```
+
+```{r correct-height}
+filter(nb1, Height < 0)
+nb1 <- mutate(nb1, Height = abs(Height))
+```
+
+```{r clean-salary}
+nb1 <- mutate(
+  nb1,
+  salary = str_replace(salary, "\\$", "") %>%
+    str_replace_all(",", "")
+)
+
+filter(nb1, !str_detect(salary, "^\\d"))
+nb1 <- nb1[nb1$prn != 4331, ]
+nb1$salary <- as.numeric(nb1$salary)
+
+knitr::kable(
+  bind_rows(
+    nb1[order(nb1$salary, decreasing = TRUE), ][1:5, ],
+    nb1[order(nb1$salary), ][1:5, ]
+  ),
+  caption = "Highest and lowest recorded salaries before outlier removal"
+)
+
+nb1 <- nb1[nb1$prn != 8483, ]
+```
+
+```{r clean-goals}
+knitr::kable(
+  bind_rows(
+    nb1[order(nb1$GOALS, decreasing = TRUE), ][1:5, ],
+    nb1[order(nb1$GOALS), ][1:5, ]
+  ),
+  caption = "Highest and lowest goal totals before outlier removal"
+)
+
+nb1 <- nb1[nb1$prn != 5250, ]
+```
+
+```{r validate-numeric-fields}
+negative_value_summary <- tibble(
+  field = c("experience", "salary", "goals", "misses", "average attendance"),
+  negative_records = c(
+    nrow(filter(nb1, PE < 0)),
+    nrow(filter(nb1, salary < 0)),
+    nrow(filter(nb1, GOALS < 0)),
+    nrow(filter(nb1, missed < 0)),
+    nrow(filter(nb1, avg_attend < 0))
+  )
+)
+
+knitr::kable(
+  negative_value_summary,
+  caption = "Negative-value checks after cleaning"
+)
+```
+
+The remaining height, experience, missed-attempt and attendance values were inspected at both ends of their distributions. No additional erroneous extremes were identified.
+
+```{r inspect-numeric-extremes}
+numeric_extremes <- bind_rows(
+  tibble(field = "Height", end = "Lowest", value = head(arrange(nb1, Height), 5)$Height),
+  tibble(field = "Height", end = "Highest", value = head(arrange(nb1, desc(Height)), 5)$Height),
+  tibble(field = "Experience", end = "Lowest", value = head(arrange(nb1, PE), 5)$PE),
+  tibble(field = "Experience", end = "Highest", value = head(arrange(nb1, desc(PE)), 5)$PE),
+  tibble(field = "Misses", end = "Lowest", value = head(arrange(nb1, missed), 5)$missed),
+  tibble(field = "Misses", end = "Highest", value = head(arrange(nb1, desc(missed)), 5)$missed),
+  tibble(field = "Average attendance", end = "Lowest", value = head(arrange(nb1, avg_attend), 5)$avg_attend),
+  tibble(field = "Average attendance", end = "Highest", value = head(arrange(nb1, desc(avg_attend)), 5)$avg_attend)
+)
+
+knitr::kable(
+  numeric_extremes,
+  caption = "Distribution-end checks for remaining numeric fields"
+)
+```
+
+## Analysis-ready variables
+
+Variable names and types are standardised. Player age is calculated at 4 July 2025, date of birth is removed and salary is expressed in AUD thousands.
+
+```{r prepare-analysis-variables}
+nb1 <- rename(
+  nb1,
+  uni = `U.N.I.`,
+  dob = `DATE of BIRTH`,
+  experience = PE,
+  position = pos,
+  goals = GOALS,
+  misses = missed,
+  avg_attendance = avg_attend
+)
+
+nb1 <- nb1 %>%
+  mutate(
+    prn = as.integer(prn),
+    uni = as.character(uni),
+    dob = as.Date(dob),
+    Height = as.numeric(Height),
+    experience = as.integer(experience),
+    salary = as.numeric(salary),
+    position = as.factor(position),
+    goals = as.integer(goals),
+    misses = as.integer(misses),
+    avg_attendance = as.numeric(avg_attendance)
+  )
+
+nb1 <- mutate(
+  nb1,
+  age_y = round(as.numeric(as.Date("2025-07-04") - dob) / 365)
+)
+
+nb1 <- nb1 %>%
+  select(-dob) %>%
+  mutate(salary = salary / 1000)
+
+dim(nb1)
+knitr::kable(
+  head(nb1, 10),
+  caption = "Analysis-ready player records"
+)
+```
+
+# Player Profile by Position
+
+## Player height and average attendance
+
+Player height is approximately symmetric around 1.80 metres. Its skewness is -0.00285, indicating almost no left or right skew.
+
+```{r height-distribution}
+hist(
+  nb1$Height,
+  main = "Distribution of Player Height",
+  xlab = "Height (metres)",
+  col = "lightblue"
+)
+moments::skewness(nb1$Height)
+```
+
+Average attendance is right-skewed, with skewness of 0.4299. Most observations are concentrated between 2,000 and 5,000, with occasional substantially larger crowds.
+
+```{r attendance-distribution}
+hist(
+  nb1$avg_attendance,
+  main = "Distribution of Average Match Attendance",
+  xlab = "Average attendance",
+  col = "lightgreen"
+)
+moments::skewness(nb1$avg_attendance)
+```
+
+## Age and salary by playing position
+
+Age distributions are relatively uniform across positions, with median age around 28 and similar variability.
+
+```{r age-by-position}
+ggplot(nb1, aes(x = position, y = age_y, fill = position)) +
+  geom_boxplot() +
+  labs(
+    title = "Player Age Distribution by Position",
+    subtitle = "Age profile across the seven playing positions",
+    x = "Playing position",
+    y = "Age (years)",
+    fill = "Position"
+  )
+```
+
+Salary distributions are also broadly similar. Median salaries for most positions are just above AUD 100,000, with marginally higher medians for Goal Attack and Goal Shooter.
+
+```{r salary-by-position}
+ggplot(nb1, aes(x = position, y = salary, fill = position)) +
+  geom_boxplot() +
+  labs(
+    title = "Player Salary Distribution by Position",
+    subtitle = "Season salary expressed in thousands of dollars",
+    x = "Playing position",
+    y = "Salary (AUD thousands)",
+    fill = "Position"
+  )
+```
+
+## Salary, experience and attendance
+
+Salary shows no clear relationship with experience across the playing positions.
+
+```{r salary-and-experience}
+ggplot(nb1, aes(x = experience, y = salary)) +
+  geom_point(alpha = 0.6, color = "darkblue") +
+  facet_wrap(~ position) +
+  labs(
+    title = "Player Salary versus Experience by Position",
+    subtitle = "Position-level comparison of salary and playing experience",
+    x = "Experience (years)",
+    y = "Salary (AUD thousands)"
+  )
+```
+
+Salary shows no clear relationship with average attendance for most positions. Goal Shooter is the exception, displaying a clear positive visual pattern.
+
+```{r salary-and-attendance-by-position}
+ggplot(nb1, aes(x = avg_attendance, y = salary)) +
+  geom_point(alpha = 0.6, color = "lightgreen") +
+  facet_wrap(~ position) +
+  labs(
+    title = "Player Salary versus Average Attendance by Position",
+    subtitle = "Position-level comparison of salary and spectator attendance",
+    x = "Average attendance",
+    y = "Salary (AUD thousands)"
+  )
+```
+
+# Goal Shooter Investment Analysis
+
+## Goal Shooter sample and performance measure
+
+Goal Shooters are isolated for focused analysis. Shooting accuracy is calculated as:
+
+$$
+\text{accuracy} = \frac{\text{goals}}{\text{goals} + \text{misses}}
+$$
+
+The completed analysis draws a reproducible sample of 1,350 Goal Shooters. The initial modelling sample contains 1,350 rows and nine variables before the two transformed variables are added.
+
+```{r goal-shooter-sample}
+netball_gs <- filter(nb1, position == "GS")
+
+netball_gs <- netball_gs %>%
+  mutate(accuracy = goals / (goals + misses)) %>%
+  relocate(accuracy, .after = salary) %>%
+  select(-misses, -position)
+
+set.seed(1978974)
+netball_gs_sample <- sample_n(netball_gs, 1350, replace = FALSE)
+
+dim(netball_gs_sample)
+knitr::kable(
+  head(netball_gs_sample, 10),
+  caption = "Goal Shooter modelling sample"
+)
+```
+
+## Salary and average attendance
+
+Average attendance rises with Goal Shooter salary in the sample. The visual association is positive but non-linear, so the fitted straight line does not fully represent its shape.
+
+```{r goal-shooter-salary-and-attendance}
+ggplot(netball_gs_sample, aes(x = salary, y = avg_attendance)) +
+  geom_point(alpha = 0.6, color = "darkred") +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(
+    title = "Goal Shooter Salary versus Average Attendance",
+    subtitle = "Observed relationship with fitted linear trend",
+    x = "Salary (AUD thousands)",
+    y = "Average attendance"
+  )
+```
+
+# Transformations
+
+## Attendance transformation
+
+The Box-Cox procedure selects lambda 0.8275 for average attendance. Because this is close to 1, the transformed relationship remains visually similar to the original.
+
+```{r attendance-box-cox}
+df_bc <- BoxCoxTrans(
+  y = netball_gs_sample$avg_attendance,
+  x = netball_gs_sample$salary,
+  lambda = seq(-7, 7, 0.0025),
+  na.rm = TRUE
+)
+df_bc$lambda
+
+netball_gs_sample <- mutate(
+  netball_gs_sample,
+  tf_att = predict(df_bc, netball_gs_sample$avg_attendance)
+) %>%
+  relocate(tf_att, .after = avg_attendance)
+```
+
+```{r transformed-attendance-and-salary}
+ggplot(netball_gs_sample, aes(x = salary, y = tf_att)) +
+  geom_point(alpha = 0.6, color = "purple") +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(
+    title = "Goal Shooter Salary versus Transformed Attendance",
+    subtitle = "Box-Cox transformed attendance with fitted linear trend",
+    x = "Salary (AUD thousands)",
+    y = "Transformed attendance"
+  )
+```
+
+## Salary and shooting accuracy
+
+Goal Shooter salary has a positive visual association with shooting accuracy, although the original relationship is non-linear.
+
+```{r salary-and-accuracy}
+ggplot(netball_gs_sample, aes(x = salary, y = accuracy)) +
+  geom_point(alpha = 0.6, color = "brown") +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(
+    title = "Goal Shooter Salary versus Shooting Accuracy",
+    subtitle = "Accuracy calculated as goals divided by total attempts",
+    x = "Salary (AUD thousands)",
+    y = "Shooting accuracy"
+  )
+```
+
+## Accuracy transformation
+
+The Box-Cox procedure selects lambda 3.85 for shooting accuracy. After transformation, the relationship between salary and transformed accuracy appears substantially more linear.
+
+```{r accuracy-box-cox}
+df_bc_acc <- BoxCoxTrans(
+  y = netball_gs_sample$accuracy,
+  x = netball_gs_sample$salary,
+  lambda = seq(-7, 7, 0.025),
+  na.rm = TRUE
+)
+df_bc_acc$lambda
+
+netball_gs_sample <- mutate(
+  netball_gs_sample,
+  tf_acc = predict(df_bc_acc, netball_gs_sample$accuracy)
+) %>%
+  relocate(tf_acc, .after = accuracy)
+```
+
+```{r transformed-accuracy-and-salary}
+ggplot(netball_gs_sample, aes(x = salary, y = tf_acc)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred") +
+  labs(
+    title = "Goal Shooter Salary versus Transformed Accuracy",
+    subtitle = "Box-Cox transformed accuracy with fitted linear trend",
+    x = "Salary (AUD thousands)",
+    y = "Transformed shooting accuracy"
+  )
+```
+
+# Linear Model
+
+The completed linear model relates transformed Goal Shooter accuracy to salary:
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \varepsilon_i,
+\qquad
+\varepsilon_i \sim N(0, \sigma^2)
+$$
+
+where \(y_i\) is transformed accuracy and \(x_i\) is salary in thousands of dollars.
+
+```{r fit-linear-model}
+model_tf_acc <- linear_reg() %>%
+  set_engine("lm") %>%
+  fit(tf_acc ~ salary, data = netball_gs_sample)
+
+summary(model_tf_acc$fit)
+```
+
+The estimated equation is:
+
+$$
+\hat{y}_i = -0.2632 + 0.0008032x_i
+$$
+
+The estimated salary coefficient is 0.000803225 per AUD 1,000 on the transformed-accuracy scale, with \(p < 2\times10^{-16}\). The model reports \(R^2=0.996\), adjusted \(R^2=0.996\), and residual standard error \(s=0.002789\). These statistics indicate a strong positive in-sample association and high explanatory fit for transformed accuracy. They do not establish that salary causes accuracy, and they do not override the diagnostic and response-boundary limitations considered below.
+
+The residual standard error gives the estimated error distribution:
+
+$$
+\varepsilon_i \sim N(0, 0.002789^2)
+$$
+
+# Model Diagnostics
+
+The residuals-versus-fitted plot retains visible curvature. Residual spread is greatest at the lower fitted values and narrows as fitted values increase. The scale-location plot confirms that the error variance changes across the fitted range, so the linearity and constant-variance assumptions are not fully satisfied.
+
+```{r residual-diagnostics}
+plot(model_tf_acc$fit, which = 1)
+plot(model_tf_acc$fit, which = 3)
+```
+
+The Q-Q plot follows the reference line through much of the centre but departs in both tails. Normality is therefore imperfect across the full residual distribution. Independence is also uncertain because the source notes that the same player may appear in several seasons under different identifiers. No time-series or within-player dependence test can be completed without a persistent player identifier.
+
+```{r normality-diagnostic}
+plot(model_tf_acc$fit, which = 2)
+```
+
+# Salary Scenario Predictions
+
+The completed model produces point predictions, 97% prediction intervals and 97% confidence intervals across salaries from AUD 120,000 to AUD 480,000.
+
+```{r prediction-inputs}
+salary <- c(120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480)
+input <- bind_cols(salary = salary)
+```
+
+```{r point-predictions}
+pred_point <- predict(model_tf_acc, new_data = input)
+pred_point_trans <- (pred_point * df_bc_acc$lambda + 1)^(1 / df_bc_acc$lambda)
+
+output_1 <- bind_cols(
+  salary_aud_thousands = salary,
+  predicted_accuracy = round(pred_point_trans, 3)
+)
+
+knitr::kable(
+  output_1,
+  caption = "Predicted Goal Shooter accuracy by salary (accuracy shown as a proportion)"
+)
+```
+
+The point predictions indicate 97.7% accuracy at AUD 300,000 and 100.2% at AUD 330,000.
+
+```{r prediction-intervals}
+pred_a <- predict(
+  model_tf_acc,
+  new_data = input,
+  type = "pred_int",
+  level = 0.97
+)
+pred_a_trans <- (pred_a * df_bc_acc$lambda + 1)^(1 / df_bc_acc$lambda)
+
+output_2 <- bind_cols(
+  salary_aud_thousands = salary,
+  prediction_lower = round(pred_a_trans[, 1], 3),
+  prediction_upper = round(pred_a_trans[, 2], 3)
+)
+
+knitr::kable(
+  output_2,
+  caption = "97% prediction intervals for Goal Shooter accuracy (accuracy shown as a proportion)"
+)
+```
+
+At AUD 300,000, the completed analysis reports a 97% prediction interval of approximately 97.0% to 98.3%. At AUD 330,000, the rounded table reports approximately 99.6% to 100.8%, which extends beyond the feasible accuracy boundary.
+
+```{r confidence-intervals}
+pred_conf <- predict(
+  model_tf_acc,
+  new_data = input,
+  type = "conf_int",
+  level = 0.97
+)
+pred_conf_trans <- (pred_conf * df_bc_acc$lambda + 1)^(1 / df_bc_acc$lambda)
+
+output_3 <- bind_cols(
+  salary_aud_thousands = salary,
+  confidence_lower = round(pred_conf_trans[, 1], 3),
+  confidence_upper = round(pred_conf_trans[, 2], 3)
+)
+
+knitr::kable(
+  output_3,
+  caption = "97% confidence intervals for mean Goal Shooter accuracy (accuracy shown as a proportion)"
+)
+```
+
+At AUD 300,000, the 97% confidence interval for mean accuracy is approximately 97.6% to 97.8% (exact model output: 97.6364% to 97.7589%). At AUD 330,000, it is approximately 100.1% to 100.3% at summary precision (exact model output: 100.1156% to 100.2470%), so the estimated mean response crosses the physical boundary.
+
+# Boundary Violation at AUD 330,000
+
+AUD 330,000 is one of thirteen illustrative salary scenarios from AUD 120,000 to AUD 480,000. It is not selected by an optimisation procedure.
+
+For the illustrative AUD 330,000 salary scenario, the fitted model produced a 100.2% point prediction, highlighting that the linear model exceeds the natural 0%-100% shooting-accuracy boundary.
+
+The corresponding 97% prediction interval extends from approximately 99.6% to 101.0% when communicated at summary precision; the model table, rounded to three decimal places as a proportion, reports 99.6% to 100.8%. Both descriptions show the same boundary violation. The numerical output is genuinely produced by the fitted model, but shooting accuracy cannot exceed 100% in practice.
+
+The fitted model indicates a positive association between Goal Shooter salary and shooting accuracy within the analysed sample. The statistically significant salary coefficient and high in-sample \(R^2\) show that salary contains explanatory information in this completed model. The boundary violation does not negate that association.
+
+Instead, the result demonstrates that the transformed linear model specification is unsuitable near the bounded upper limit of shooting accuracy. It is not evidence that more than 100% accuracy is possible, and it is not a realistic high-salary performance forecast. Salary alone is insufficient for operational recruitment or salary decisions. AUD 330,000 is not an optimal salary, a recommended salary, a maximum justified salary or evidence of financial return.
+
+The 97% confidence and prediction intervals are model-based intervals. Their reliability depends on linearity, constant variance, normal residuals and independence assumptions that the diagnostics do not fully support.
+
+# Decision Implications
+
+- Player height was approximately symmetric, with skewness of -0.00285.
+- Average attendance was right-skewed, with skewness of 0.4299.
+- Age and salary distributions were broadly similar across playing positions.
+- Salary showed no clear relationship with experience.
+- Goal Shooter salary had positive visual associations with average attendance and shooting accuracy in the analysed sample.
+- The accuracy transformation used lambda 3.85, after which the salary-accuracy relationship appeared substantially more linear.
+- Model diagnostics did not fully support linearity, constant variance, residual normality or independence.
+
+The evidence is useful for comparing illustrative Goal Shooter salary scenarios and identifying recruits for further review. It is weaker for attendance strategy because association does not show that salary causes attendance. It is insufficient for a major financial commitment because average attendance is not revenue and the dataset contains no income-sharing percentage, revenue or cost data.
+
+## Management interpretation
+
+Higher-paid Goal Shooters were associated with greater shooting accuracy and average attendance in the analysed sample. The salary coefficient, p-value and \(R^2\) support a strong in-sample statistical association with transformed accuracy, but the model does not establish that higher salary causes either outcome. The AUD 330,000 scenario identifies a model-specification limitation near the natural boundary and cannot be treated as a feasible performance forecast or validated salary ceiling.
+
+# Recommendations
+
+- Use the model to compare scenarios and screen recruits, not as the sole basis for a contract.
+- Do not interpret AUD 330,000 as a recommended salary, validated maximum salary or return-on-investment threshold.
+- Validate shortlisted Goal Shooters with additional performance, availability and team-fit evidence.
+- Collect attendance-linked revenue, venue-sharing and cost data before approving an exceptional salary above the standard AUD 120,000 budget.
+- Treat predictions approaching 100% as evidence that the model has reached its practical boundary.
+- Consider a bounded-response modelling approach before operational forecasting near the upper accuracy limit.
+
+# Risks and Limitations
+
+- The data is observational, so the reported relationships do not establish causation.
+- A player may appear in multiple seasons under different identifiers, making independence questionable.
+- The Goal Shooter sample is a subgroup and does not represent all positions.
+- Linear-model assumptions were not fully satisfied.
+- Transformed predictions require careful back-transformation.
+- Some predicted accuracy values exceed 100%, limiting practical interpretation at higher salary levels.
+- Average attendance is not revenue, and salary-performance association does not prove salary causes performance.
+- Full ROI cannot be estimated without revenue, income-sharing and cost information.
+- The source dataset’s external sampling process is not documented in the completed report.
+
+# Conclusion
+
+The completed analysis provides a transparent, reproducible comparison of player profiles and Goal Shooter salary scenarios. The fitted model indicates a positive association between Goal Shooter salary and shooting accuracy within the analysed sample. Its statistically significant coefficient and high in-sample explanatory fit show that salary contains predictive information for transformed accuracy in this dataset, but the relationship is observational and cannot establish causation or commercial return.
+
+Predictions at higher salary scenarios exceed the natural 100% boundary. This indicates a limitation of the model specification rather than evidence that more than 100% accuracy is possible or that salary has no predictive relationship. Salary may provide explanatory information, but the completed model is not reliable for high-salary operational decisions and should not be used as the sole basis for player investment. Recruitment decisions should combine it with player-specific evidence, robust financial data and a modelling approach suited to bounded outcomes.
+
+# Technical Appendix
+
+## Variable definitions
+
+- `uni`: de-identified player identifier.
+- `Height`: player height in metres.
+- `experience`: playing experience in years.
+- `salary`: salary expressed in thousands of Australian dollars.
+- `position`: playing position.
+- `goals`: successful goal attempts.
+- `misses`: missed goal attempts.
+- `avg_attendance`: average attendance.
+- `age_y`: derived player age in years.
+- `accuracy`: goals divided by total attempts.
+- `tf_att`: Box-Cox transformed attendance.
+- `tf_acc`: Box-Cox transformed shooting accuracy.
+
+## References
+
+1. [`dplyr::arrange()` reference](https://dplyr.tidyverse.org/reference/arrange.html)
+2. [`ggplot2::facet_wrap()` reference](https://ggplot2.tidyverse.org/reference/facet_wrap.html)
+3. [`caret::BoxCoxTrans()` reference](https://topepo.github.io/caret/pre-processing.html#transformations-for-individual-predictors)
+
+## Reproducibility
+
+The report uses relative paths and fixed seeds to preserve the completed sampling workflow. `tidyverse` supports import, cleaning, transformation and visualisation; `moments` calculates skewness; `caret` provides Box-Cox transformation; and `tidymodels` fits the linear model and produces predictions.
+
+```{r session-information}
+sessionInfo()
+```

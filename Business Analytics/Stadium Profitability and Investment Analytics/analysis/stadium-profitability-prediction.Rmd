@@ -1,0 +1,669 @@
+---
+title: "Carnac Menhirs Stadium Profitability Decision Support"
+subtitle: "Classification Modelling and Operational Scenario Analysis"
+author: "Md Soad Solaiman"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    theme: readable
+---
+
+# Executive Summary
+
+Carnac Menhirs has purchased an old basketball stadium and renamed it La Stade des Menhirs. The managing committee needs to assess whether the current first-season configuration is likely to be profitable and whether a practical operational change could improve that outlook.
+
+The completed analysis uses 25,000 comparable club-season records to fit a classification tree and a logistic regression model. The current scenario—40 combined years of experience across seven players, 1,500 members, poor stadium condition, no recent premiership and a kiosk—is classified as not profitable by both models. The logistic model estimates a 41.78% probability of profit.
+
+Changing the café to a vending machine lowers the estimated probability to 31.66%. Changing it to a bar raises the probability to 54.41%, and both models classify the bar scenario as profitable. This is a modelled scenario result, not a guarantee of financial return, because conversion and operating costs are not included.
+
+# Business Context
+
+Carnac Menhirs has assembled a new seven-player team with 40 combined years of experience. The club has acquired La Stade des Menhirs as its home venue. The stadium is in poor condition, 1,500 members have joined for the coming season and the proposed spectator-service format is a kiosk.
+
+The managing committee wants evidence on first-season profitability risk and a single operational change that could improve the modelled outcome. The intended audience is the non-technical committee, so modelling results are interpreted in operational and financial terms.
+
+# Decision Problem
+
+The analysis addresses three management decisions:
+
+- whether the current stadium configuration is predicted to be profitable;
+- which club and venue factors are most relevant to that prediction; and
+- whether changing the café format improves the probability enough to justify detailed commercial assessment.
+
+The models classify profitability and compare scenarios. They do not estimate the size of a profit or loss, and they do not include conversion costs.
+
+# Business Questions
+
+- How should profit be defined for comparable stadium-owning clubs?
+- Which operational variables appear most important in a classification tree?
+- Which individual factors and interactions contribute to the logistic model?
+- How accurately does the selected model classify held-out records?
+- What do sensitivity, specificity, ROC and AUC indicate about model reliability?
+- Is La Stade des Menhirs predicted to make a first-season profit?
+- How do vending-machine and bar scenarios change the predicted outcome?
+- Which tested intervention offers the strongest modelled improvement?
+
+# Dataset
+
+The included dataset contains 25,000 club-season records and seven source variables:
+
+- revenue and costs, measured in thousands of dollars;
+- average years of player experience;
+- paying membership;
+- premiership history during the previous 10 years;
+- stadium condition; and
+- café type.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  fig.align = "center",
+  fig.width = 8.5,
+  fig.height = 5.25,
+  dpi = 120
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(tidymodels)
+library(rpart.plot)
+library(vip)
+library(car)
+library(yardstick)
+```
+
+```{r load-data}
+stades <- read_csv("../data/stades_2.csv", show_col_types = FALSE)
+
+dim(stades)
+knitr::kable(
+  head(stades, 10),
+  caption = "Source club-season records"
+)
+```
+
+# Data Preparation
+
+The source is described as pre-cleaned. The workflow preserves all 25,000 records, uses a fixed seed for reproducible ordering and standardises names and data types.
+
+```{r reproducible-ordering}
+set.seed(1978974)
+stades <- sample_n(stades, 25000, replace = FALSE)
+dim(stades)
+```
+
+```{r standardise-variables}
+stades <- stades %>%
+  rename(
+    revenue = Revenue,
+    costs = Costs,
+    ade = `a d'e`,
+    members = MEMBERS,
+    coupe = COUPE,
+    cond = Cond,
+    cafe = Cafe
+  ) %>%
+  mutate(
+    members = as.numeric(members),
+    ade = as.numeric(ade),
+    revenue = as.numeric(revenue),
+    costs = as.numeric(costs),
+    coupe = as.factor(coupe),
+    cond = as.factor(cond),
+    cafe = as.factor(cafe)
+  )
+
+dim(stades)
+knitr::kable(
+  head(stades, 10),
+  caption = "Standardised club-season records"
+)
+```
+
+# Profit Definition
+
+Profit is classified as `yes` when revenue exceeds costs and `no` otherwise. Revenue and costs are then removed from the predictor set because they directly determine the response and would leak the outcome into the models.
+
+```{r define-profit}
+stades <- stades %>%
+  mutate(profit = ifelse(revenue > costs, "yes", "no")) %>%
+  mutate(profit = factor(profit, levels = c("no", "yes"))) %>%
+  select(profit, everything()) %>%
+  select(-revenue, -costs)
+
+dim(stades)
+levels(stades$profit)
+count(stades, profit)
+knitr::kable(
+  head(stades, 10),
+  caption = "Modelling data after profit classification"
+)
+```
+
+# Classification Tree
+
+The classification tree uses all remaining variables to predict profit.
+
+```{r classification-tree}
+stades_tree <- decision_tree(mode = "classification") %>%
+  set_engine("rpart") %>%
+  fit(profit ~ ., data = stades)
+
+stades_tree
+
+rpart.plot(
+  stades_tree$fit,
+  extra = 1,
+  type = 2,
+  roundint = FALSE,
+  main = "Classification Tree for Stadium Profitability"
+)
+```
+
+The tree contains four splits and five terminal nodes. Each terminal node represents a segment of club-season records assigned a predicted profit class.
+
+```{r variable-importance}
+stades_tree %>%
+  vip(num_features = 5) +
+  theme_minimal() +
+  labs(
+    title = "Variable Importance for Stadium Profitability",
+    subtitle = "Classification-tree predictor ranking",
+    x = "Importance",
+    y = "Predictor"
+  )
+```
+
+Premiership history, membership and café type appear most important in the tree’s variable-importance analysis.
+
+# Logistic Regression
+
+## Training and testing data
+
+The reproducible split assigns 18,000 records to training and 7,000 to testing.
+
+```{r train-test-split}
+set.seed(1978974)
+pro_por <- 18000 / 25000
+pro_por
+
+stades_split <- initial_split(stades, prop = pro_por)
+stades_train <- training(stades_split)
+stades_test <- testing(stades_split)
+
+dim(stades_train)
+dim(stades_test)
+```
+
+## Baseline logistic regression
+
+```{r baseline-logistic-model}
+stades_fit <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(profit ~ ., data = stades_train)
+
+summary(stades_fit$fit)
+```
+
+The baseline model includes average experience, membership, premiership history, stadium condition and café type. The completed interpretation notes that the stadium-condition terms do not meet the 93% significance threshold in this specification.
+
+# Interaction Analysis
+
+The interaction model includes all individual predictors and all second-order interactions.
+
+```{r interaction-model}
+stades_lin_fit <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(profit ~ .^2, data = stades_train)
+
+Anova(stades_lin_fit$fit)
+```
+
+The completed analysis identifies `members:coupe` and `members:cafe` as meeting the 93% significance threshold, with p-values of 4.536e-06 and 3.266e-08 respectively.
+
+# Model Selection
+
+Interactions with average experience are excluded while retaining experience as an individual predictor.
+
+```{r reduced-interaction-model}
+stades_rmv_exp <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(
+    profit ~ ade + members + coupe + cond + cafe +
+      members:coupe + members:cond + members:cafe +
+      coupe:cond + coupe:cafe + cond:cafe,
+    data = stades_train
+  )
+
+anova(stades_rmv_exp$fit)
+```
+
+The completed workflow uses a 93% significance level, corresponding to a removal threshold of 0.07. This is less conventional than the commonly used 95% level. The `coupe:cafe` interaction is removed first because its p-value of 0.6608 is the largest above 0.07.
+
+```{r first-backward-step}
+stades_bsr <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(
+    profit ~ ade + members + coupe + cond + cafe +
+      members:coupe + members:cond + members:cafe +
+      coupe:cond + cond:cafe,
+    data = stades_train
+  )
+
+anova(stades_bsr$fit)
+```
+
+Stadium condition and its remaining interactions are removed because their p-values do not meet the 93% threshold. The final model retains average experience, membership, premiership history, café type, `members:coupe` and `members:cafe`. The main effects associated with retained interactions remain in the model, preserving model hierarchy.
+
+```{r final-logistic-model}
+stades_bsr <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(
+    profit ~ ade + members + coupe + cafe +
+      members:coupe + members:cafe,
+    data = stades_train
+  )
+
+anova(stades_bsr$fit)
+summary(stades_bsr$fit)
+```
+
+In the final model, `members:coupe` and `members:cafe` have p-values of 1.411e-05 and 1.557e-08 respectively.
+
+Backward selection is sample-sensitive, and statistical significance does not necessarily imply operational importance. The selected specification is retained as the completed analytical workflow rather than presented as a uniquely correct model.
+
+## Final logistic equation
+
+Let \(\hat p_i\) denote the estimated probability that observation \(i\) is profitable. The completed equation is:
+
+$$
+\log\!\left(\frac{\hat p_i}{1-\hat p_i}\right)
+= -1.33
++ 0.136 \cdot ade_i
++ 0.000489 \cdot members_i
++ 0.860 \cdot \{\text{coupe}_i=\text{yes}\}
+- 0.318 \cdot \{\text{cafe}_i=\text{kiosk}\}
+- 0.685 \cdot \{\text{cafe}_i=\text{machine}\}
++ 0.000135 \cdot members_i \cdot \{\text{coupe}_i=\text{yes}\}
+- 0.000127 \cdot members_i \cdot \{\text{cafe}_i=\text{kiosk}\}
+- 0.000174 \cdot members_i \cdot \{\text{cafe}_i=\text{machine}\}
+$$
+
+The baseline categories are `coupe = "no"` and `cafe = "bar"`.
+
+# Held-Out Evaluation
+
+## Held-out predictions
+
+```{r held-out-predictions}
+preds <- predict(stades_bsr, new_data = stades_test, type = "class")
+stades_preds_testing <- predict(
+  stades_bsr,
+  new_data = stades_test,
+  type = "prob"
+)
+
+classification_threshold <- 0.50
+
+threshold_class <- factor(
+  if_else(
+    stades_preds_testing$.pred_yes >= classification_threshold,
+    "yes",
+    "no"
+  ),
+  levels = levels(stades_test$profit)
+)
+
+stopifnot(all(threshold_class == preds$.pred_class))
+
+stades_evaluation <- bind_cols(
+  stades_test %>% select(ade, members, coupe, cond, cafe, profit),
+  preds %>% rename(pred_profit = .pred_class),
+  stades_preds_testing
+)
+
+levels(stades_evaluation$profit)
+levels(stades_evaluation$pred_profit)
+names(stades_preds_testing)
+dim(stades_evaluation)
+
+knitr::kable(
+  head(
+    stades_evaluation %>%
+      select(profit, pred_profit, .pred_no, .pred_yes),
+    10
+  ),
+  caption = "Held-out profit classifications and probabilities"
+)
+```
+
+# Confusion Matrix
+
+The truth variable is `profit`, the predicted class is `pred_profit`, and `.pred_yes` is the predicted probability of the profitable class. Both truth and predicted class use factor levels `no`, then `yes`; therefore `event_level = "second"` explicitly defines `yes` as the business event. The 0.50 threshold used by the class prediction is verified above.
+
+```{r confusion-matrix}
+confusion_mat <- conf_mat(
+  stades_evaluation,
+  truth = profit,
+  estimate = pred_profit
+)
+
+confusion_mat
+
+confusion_counts <- tibble(
+  outcome = c(
+    "True positive",
+    "True negative",
+    "False positive",
+    "False negative"
+  ),
+  count = c(
+    confusion_mat$table["yes", "yes"],
+    confusion_mat$table["no", "no"],
+    confusion_mat$table["yes", "no"],
+    confusion_mat$table["no", "yes"]
+  )
+)
+
+knitr::kable(
+  confusion_counts,
+  caption = "Confusion-matrix counts with profitable records as the event"
+)
+```
+
+`yardstick::conf_mat()` displays predicted classes in rows and truth classes in columns. The held-out results are 3,259 true positives, 1,572 true negatives, 1,273 false positives and 896 false negatives.
+
+```{r classification-metrics}
+classification_metrics <- bind_rows(
+  yardstick::accuracy(
+    stades_evaluation,
+    truth = profit,
+    estimate = pred_profit
+  ),
+  yardstick::sens(
+    stades_evaluation,
+    truth = profit,
+    estimate = pred_profit,
+    event_level = "second"
+  ),
+  yardstick::spec(
+    stades_evaluation,
+    truth = profit,
+    estimate = pred_profit,
+    event_level = "second"
+  ),
+  yardstick::precision(
+    stades_evaluation,
+    truth = profit,
+    estimate = pred_profit,
+    event_level = "second"
+  ),
+  yardstick::bal_accuracy(
+    stades_evaluation,
+    truth = profit,
+    estimate = pred_profit,
+    event_level = "second"
+  )
+)
+
+knitr::kable(
+  classification_metrics,
+  digits = 4,
+  caption = "Held-out classification metrics at a 0.50 threshold"
+)
+```
+
+Held-out accuracy is 69.01%. Sensitivity, or recall for profitable records, is 78.44%; specificity for not-profitable records is 55.25%; precision for profitable predictions is 71.91%; and balanced accuracy is 66.85%.
+
+The previous 21.56% value labelled as sensitivity was calculated as \(896/(3259+896)\). With profitable records as the event, that quantity is the false-negative rate, not sensitivity. The underlying predictions are unchanged; only the metric definition and label are corrected.
+
+## Classification Threshold
+
+The model converts probabilities to classes using the conventional 0.50 threshold. This default is not automatically optimal for the business decision. Lowering it would generally identify more potentially profitable stadiums but could increase false-positive classifications; raising it would generally reduce false positives but miss more profitable stadiums. A different threshold should be selected using business costs and validation data, not optimised on this held-out test set and then reported as unbiased test performance.
+
+# ROC and AUC
+
+```{r authoritative-roc}
+profit_roc <- yardstick::roc_curve(
+  stades_evaluation,
+  truth = profit,
+  .pred_yes,
+  event_level = "second"
+)
+
+profit_auc <- yardstick::roc_auc(
+  stades_evaluation,
+  truth = profit,
+  .pred_yes,
+  event_level = "second"
+)
+
+profit_auc
+
+autoplot(profit_roc) +
+  geom_abline(
+    intercept = 0,
+    slope = 1,
+    linetype = "dashed",
+    colour = "grey50"
+  ) +
+  labs(
+    title = "ROC Curve for Held-Out Profit Classification",
+    subtitle = "Event: profitable (`yes`); probability: `.pred_yes`",
+    x = "1 - specificity",
+    y = "Sensitivity"
+  ) +
+  theme_minimal()
+```
+
+Using `profit` as truth, `yes` as the event and `.pred_yes` as the profitable-class probability produces an AUC of 75.28%. This indicates useful but imperfect ranking performance and is independent of the 0.50 classification threshold.
+
+# Stadium Scenarios
+
+## Current configuration
+
+The current scenario uses average experience of \(40/7\) years, poor stadium condition, no recent premiership, a kiosk and 1,500 members.
+
+```{r current-stadium-scenario}
+new_tibble_team <- tibble(
+  ade = 40 / 7,
+  cond = "poor",
+  coupe = "no",
+  cafe = "kiosk",
+  members = 1500
+)
+
+test_client <- predict(
+  stades_bsr,
+  new_data = new_tibble_team,
+  type = "class"
+)
+test_client
+
+pred_test_client <- predict(
+  object = stades_bsr,
+  new_data = new_tibble_team,
+  type = "prob"
+)
+pred_test_client
+```
+
+The logistic model classifies the current scenario as not profitable, with a 41.78% probability of profit.
+
+```{r scenario-classification-tree}
+stades_tree_1 <- decision_tree(mode = "classification") %>%
+  set_engine("rpart") %>%
+  fit(profit ~ ., data = stades_train)
+
+rpart.plot(
+  stades_tree_1$fit,
+  extra = 1,
+  type = 2,
+  roundint = FALSE,
+  main = "Training-Data Classification Tree"
+)
+
+new_tree <- predict(
+  stades_tree_1,
+  new_data = new_tibble_team,
+  type = "class"
+)
+new_tree
+```
+
+The classification tree also predicts that the current scenario will not make a profit.
+
+## Vending-machine scenario
+
+```{r vending-machine-scenario}
+new_tibble_team_3 <- tibble(
+  ade = 40 / 7,
+  cond = "poor",
+  coupe = "no",
+  cafe = "machine",
+  members = 1500
+)
+
+pred_test_client_3 <- predict(
+  object = stades_bsr,
+  new_data = new_tibble_team_3,
+  type = "prob"
+)
+pred_test_client_3
+
+class_test_client_3 <- predict(
+  object = stades_bsr,
+  new_data = new_tibble_team_3,
+  type = "class"
+)
+class_test_client_3
+
+new_tree_2 <- predict(
+  stades_tree_1,
+  new_data = new_tibble_team_3,
+  type = "class"
+)
+new_tree_2
+```
+
+The estimated probability of profit falls to 31.66%. At the 0.50 threshold, both the logistic model and classification tree predict that the scenario is not profitable.
+
+## Bar scenario
+
+```{r bar-scenario}
+new_tibble_team_2 <- tibble(
+  ade = 40 / 7,
+  cond = "poor",
+  coupe = "no",
+  cafe = "bar",
+  members = 1500
+)
+
+pred_test_client_2 <- predict(
+  object = stades_bsr,
+  new_data = new_tibble_team_2,
+  type = "prob"
+)
+pred_test_client_2
+
+class_test_client_2 <- predict(
+  object = stades_bsr,
+  new_data = new_tibble_team_2,
+  type = "class"
+)
+class_test_client_2
+
+new_tree_1 <- predict(
+  stades_tree_1,
+  new_data = new_tibble_team_2,
+  type = "class"
+)
+new_tree_1
+```
+
+The estimated probability of profit rises to 54.41%. At the 0.50 threshold, both the logistic model and classification tree predict that the scenario is profitable.
+
+# Key Findings
+
+- The current kiosk scenario is classified as not profitable by both models.
+- Its logistic-model probability of profit is 41.78%.
+- A vending machine lowers the modelled probability to 31.66%.
+- A bar raises the modelled probability to 54.41%, with both models predicting profit.
+- Membership interacts with premiership history and café type in the final logistic model.
+- At the 0.50 threshold, held-out accuracy is 69.01%, profitable-class sensitivity is 78.44%, not-profitable specificity is 55.25%, profitable-class precision is 71.91%, and balanced accuracy is 66.85%.
+- The profitable-class ROC specification produces an AUC of 75.28%.
+
+# Decision Implications
+
+## Operational
+
+The bar scenario produced the highest predicted probability among the tested café formats, conditional on the fitted model and all other inputs being held constant. Management should treat it as the preferred option for a costed feasibility assessment rather than immediate implementation.
+
+## Financial
+
+The probability increase does not include conversion, staffing, licensing, stock or operating costs. It therefore does not establish a positive return from changing café format.
+
+## Planning
+
+The current scenario has a higher modelled probability of loss than profit. First-season monitoring should capture membership, attendance, café transactions, average spend, revenue and costs so the model can be recalibrated.
+
+# Recommendations
+
+- Develop a costed business case for replacing the kiosk with a bar.
+- Compare the predicted probability improvement with conversion and operating costs.
+- Monitor member and non-member café spending separately.
+- Review classification probabilities alongside predicted classes.
+- Refit and validate the models after collecting first-season data.
+
+# Risks and Limitations
+
+- Observational data does not establish that café format causes profitability.
+- The source clubs may differ from the French operating context.
+- Classification accuracy and AUC indicate useful but imperfect performance.
+- Profitable-class sensitivity is stronger than not-profitable specificity, so false-positive classifications remain a material risk.
+- The 93% significance threshold is less conventional than 95%.
+- Backward selection may be sensitive to sample and specification.
+- Profit is binary, so the size of profit or loss is not estimated.
+- Intervention and operating costs are absent.
+- No external validation or repeated cross-validation is reported.
+- Each café scenario changes one input while holding all others fixed.
+
+# Conclusion
+
+The selected logistic model provides useful but imperfect discrimination between profitable and not-profitable club seasons. With `yes` explicitly defined as the event, the held-out results show 69.01% accuracy, 78.44% sensitivity, 55.25% specificity, 71.91% precision, 66.85% balanced accuracy and an AUC of 75.28%.
+
+The current kiosk configuration remains below the 0.50 threshold at a 41.78% predicted probability of profit. The bar scenario produces the highest predicted probability among the tested café formats at 54.41%, but this is a conditional scenario comparison rather than evidence that installing a bar causes profitability. A costed business case is required before implementation.
+
+# Technical Appendix
+
+## Variable Definitions
+
+- `profit`: `yes` when revenue exceeds costs; `no` otherwise.
+- `ade`: average years of player experience.
+- `members`: number of paying members.
+- `coupe`: recent premiership indicator.
+- `cond`: stadium condition.
+- `cafe`: café service type.
+
+## Model Geometry
+
+The model contains two quantitative predictors, `ade` and `members`, and categorical structures for premiership history and café type. The retained interactions allow the membership slope to vary across premiership and café categories.
+
+## Scenario Inputs
+
+All three stadium scenarios hold average experience at \(40/7\), stadium condition at poor, premiership history at no and membership at 1,500. Only café type changes.
+
+## Reproducibility
+
+The report uses a fixed seed, an 18,000/7,000 train/test split and portable relative paths. `tidyverse` supports data preparation, `tidymodels` supports modelling, `yardstick` provides explicitly oriented classification and ROC metrics, `rpart.plot` visualises trees, `vip` plots variable importance and `car` supplies analysis-of-variance testing.
+
+```{r session-information}
+sessionInfo()
+```
+
+This project originated from university coursework and has been professionally reorganised as a business analytics portfolio case study.

@@ -1,0 +1,544 @@
+/* ================================================================
+   South Australia Rental Market Analytics for International Students
+   Public Data Analytics · Author: Md Soad Solaiman
+================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Tokens ─────────────────────────────────────────────────── */
+:root {
+  --ink:       #1a1a2e;
+  --ink-soft:  #4a4a6a;
+  --paper:     #faf8f4;
+  --warm:      #f4f0e8;
+  --rule:      #d8d0c0;
+  --rule-lt:   #eeeae4;
+  --blue:      #1A6EA8;
+  --blue-bg:   #EBF5FB;
+  --gold:      #c9a84c;
+  --gold-bg:   #fdf6e3;
+  --red:       #C0392B;
+  --red-bg:    #FDEDEC;
+  --green:     #1E8449;
+  --green-bg:  #EAFAF1;
+  --teal:      #4A9FD5;
+}
+
+/* ── Base ───────────────────────────────────────────────────── */
+body {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  font-size: 17.5px !important;
+  line-height: 1.9 !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Page & sidebar backgrounds ─────────────────────────────── */
+#quarto-content, .quarto-container, main.content {
+  background: var(--paper) !important;
+}
+
+#quarto-sidebar, .sidebar.sidebar-navigation {
+  background: var(--warm) !important;
+  border-right: 1px solid var(--rule) !important;
+}
+
+/* ── TOC ────────────────────────────────────────────────────── */
+#quarto-sidebar .sidebar-title,
+nav[role="doc-toc"] > h2 {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 3px !important;
+  text-transform: uppercase !important;
+  color: var(--gold) !important;
+  font-weight: 500 !important;
+  padding: 24px 16px 8px !important;
+}
+
+.sidebar-item .sidebar-item-text,
+nav[role="doc-toc"] a {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  font-size: 11px !important;
+  letter-spacing: 0 !important;
+  color: var(--ink-soft) !important;
+  line-height: 1.65 !important;
+  font-weight: 500 !important;
+}
+
+.sidebar-item-container:hover .sidebar-item-text,
+nav[role="doc-toc"] a:hover {
+  color: var(--blue) !important;
+}
+
+nav[role="doc-toc"] a.active {
+  color: var(--blue) !important;
+  border-left: 3px solid var(--blue) !important;
+  padding-left: 8px !important;
+  font-weight: 600 !important;
+}
+
+/* ── Title block — dark editorial cover ─────────────────────── */
+#title-block-header,
+.quarto-title-block {
+  background: var(--ink) !important;
+  padding: 52px 56px 40px !important;
+  margin-bottom: 0 !important;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 0 0;
+}
+
+#title-block-header::before,
+.quarto-title-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 65%, rgba(26,110,168,0.20) 0%, transparent 58%),
+    radial-gradient(ellipse at 78% 18%, rgba(192,57,43,0.15) 0%, transparent 52%);
+  pointer-events: none;
+}
+
+/* Course tag line above title */
+#title-block-header::after {
+  content: 'PUBLIC DATA ANALYTICS';
+  display: block;
+  position: absolute;
+  top: 28px;
+  left: 56px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 3.5px;
+  color: var(--gold);
+  opacity: 0.9;
+}
+
+.quarto-title h1.title,
+#title-block-header h1.title {
+  font-family: 'Playfair Display', serif !important;
+  font-size: clamp(36px, 5.5vw, 58px) !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.5px !important;
+  margin-bottom: 14px !important;
+}
+
+.quarto-title .subtitle,
+#title-block-header .subtitle {
+  font-family: 'Source Serif 4', serif !important;
+  font-size: 18px !important;
+  font-style: italic !important;
+  color: #c0c0d4 !important;
+  font-weight: 300 !important;
+  line-height: 1.65 !important;
+  margin-bottom: 32px !important;
+}
+
+.quarto-title-meta,
+#title-block-header .quarto-title-meta {
+  border-top: 1px solid rgba(255,255,255,0.12) !important;
+  padding-top: 22px !important;
+  margin-top: 22px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 32px !important;
+}
+
+.quarto-title-meta-heading {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 2.5px !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.45) !important;
+  margin-bottom: 5px !important;
+}
+
+.quarto-title-meta-contents p {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 13.5px !important;
+  letter-spacing: 0.8px !important;
+  color: rgba(255,255,255,0.82) !important;
+  margin: 0 !important;
+}
+
+/* ── H2 — chapter openers ───────────────────────────────────── */
+h2 {
+  font-family: 'Playfair Display', serif !important;
+  font-size: clamp(20px, 2.4vw, 27px) !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  color: var(--ink) !important;
+  margin-top: 16px !important;
+  margin-bottom: 6px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--rule) !important;
+  letter-spacing: -0.1px !important;
+}
+
+/* Gold dash prefix */
+h2::before {
+  content: '— ';
+  color: var(--gold);
+  font-weight: 400;
+}
+
+/* ── H3 ─────────────────────────────────────────────────────── */
+h3 {
+  font-family: 'Playfair Display', serif !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  font-style: italic !important;
+  color: var(--ink) !important;
+  margin-top: 52px !important;
+  margin-bottom: 12px !important;
+  padding-left: 18px !important;
+  border-left: 4px solid var(--blue) !important;
+}
+
+/* ── H4 ─────────────────────────────────────────────────────── */
+h4 {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 3px !important;
+  text-transform: uppercase !important;
+  color: var(--gold) !important;
+  margin-top: 36px !important;
+  margin-bottom: 10px !important;
+}
+
+/* ── Paragraphs ─────────────────────────────────────────────── */
+p {
+  font-size: 17.5px !important;
+  line-height: 1.9 !important;
+  color: #28283e !important;
+  margin-bottom: 1.4em !important;
+}
+
+/* Larger lead paragraph after chapter headings */
+h2 + p {
+  font-size: 17.5px !important;
+  color: var(--ink) !important;
+  line-height: 1.88 !important;
+  margin-top: 10px !important;
+}
+
+h3 + p {
+  font-size: 18px !important;
+}
+
+/* ── Bold / italic ──────────────────────────────────────────── */
+strong { color: var(--ink) !important; font-weight: 700 !important; }
+em     { font-style: italic !important; color: var(--ink-soft) !important; }
+
+/* ── Horizontal rule ────────────────────────────────────────── */
+hr {
+  border: none !important;
+  border-top: 1px solid var(--rule-lt) !important;
+  margin: 4px 0 !important;
+}
+
+/* Hide the hr that Quarto auto-inserts before every h2 section */
+section > hr:first-child {
+  display: none !important;
+}
+
+/* ── Links ──────────────────────────────────────────────────── */
+a {
+  color: var(--blue) !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 0.16em !important;
+  transition: color 0.18s !important;
+}
+a:hover { color: #145681 !important; }
+a:focus-visible {
+  outline: 3px solid var(--gold) !important;
+  outline-offset: 3px !important;
+  border-radius: 2px;
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-family: 'Source Serif 4', serif !important;
+  font-size: 14.5px !important;
+  margin: 40px 0 !important;
+  background: #ffffff !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+
+.table-responsive,
+.cell-output-display {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+thead tr {
+  background: var(--ink) !important;
+}
+
+thead th {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+  font-weight: 500 !important;
+  padding: 14px 20px !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+tbody td {
+  padding: 12px 20px !important;
+  border-bottom: 1px solid var(--rule-lt) !important;
+  color: var(--ink) !important;
+  line-height: 1.55 !important;
+}
+
+tbody tr:last-child td { border-bottom: none !important; }
+tbody tr:nth-child(even) { background: #f7f5f1 !important; }
+tbody tr:hover { background: var(--blue-bg) !important; transition: background 0.15s; }
+
+caption, .table-caption, p.caption {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.5px !important;
+  color: var(--ink-soft) !important;
+  text-align: left !important;
+  padding: 6px 0 10px !important;
+  line-height: 1.5 !important;
+}
+
+/* ── Figures ────────────────────────────────────────────────── */
+figure {
+  margin: 48px 0 !important;
+  background: #ffffff !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 3px 18px rgba(0,0,0,0.07) !important;
+}
+
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+figcaption, .figure-caption, p.caption {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.4px !important;
+  color: var(--ink-soft) !important;
+  line-height: 1.6 !important;
+  padding: 11px 20px 13px !important;
+  border-top: 1px solid var(--rule) !important;
+  background: var(--warm) !important;
+  margin: 0 !important;
+}
+
+/* ── Callouts ───────────────────────────────────────────────── */
+div.callout {
+  margin: 40px 0 !important;
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* shared title style */
+div.callout .callout-header,
+div.callout > .callout-header {
+  background: transparent !important;
+  padding: 14px 20px 4px !important;
+}
+
+div.callout .callout-title-container {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 2.5px !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+}
+
+div.callout .callout-body,
+div.callout > .callout-body {
+  padding: 4px 20px 16px !important;
+}
+
+div.callout .callout-body p,
+div.callout .callout-body-container p {
+  font-size: 15px !important;
+  line-height: 1.78 !important;
+  margin: 0 !important;
+}
+
+/* note */
+div.callout-note {
+  background: var(--blue-bg) !important;
+  border-left: 5px solid var(--blue) !important;
+}
+div.callout-note .callout-title-container { color: var(--blue) !important; }
+div.callout-note .callout-body p { color: #1a3a5a !important; }
+
+/* tip */
+div.callout-tip {
+  background: var(--green-bg) !important;
+  border-left: 5px solid var(--green) !important;
+}
+div.callout-tip .callout-title-container { color: var(--green) !important; }
+div.callout-tip .callout-body p { color: #1a4a30 !important; }
+
+/* warning */
+div.callout-warning {
+  background: var(--red-bg) !important;
+  border-left: 5px solid var(--red) !important;
+}
+div.callout-warning .callout-title-container { color: var(--red) !important; }
+div.callout-warning .callout-body p { color: #5a1a1a !important; }
+
+/* important */
+div.callout-important {
+  background: var(--gold-bg) !important;
+  border-left: 5px solid var(--gold) !important;
+}
+div.callout-important .callout-title-container { color: #7a5500 !important; }
+div.callout-important .callout-body p { color: #4a3000 !important; }
+
+/* ── Inline code ────────────────────────────────────────────── */
+code {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 13px !important;
+  background: #eeeae2 !important;
+  padding: 1px 6px !important;
+  border-radius: 3px !important;
+  color: var(--ink) !important;
+}
+
+/* ── Lists ──────────────────────────────────────────────────── */
+ul, ol {
+  padding-left: 28px !important;
+  margin: 10px 0 22px !important;
+}
+
+li {
+  font-family: 'Source Serif 4', serif !important;
+  font-size: 17px !important;
+  line-height: 1.88 !important;
+  color: #28283e !important;
+  margin-bottom: 6px !important;
+}
+
+li strong { color: var(--ink) !important; }
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 3px; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  body { font-size: 16px !important; }
+  h2   { font-size: 26px !important; margin-top: 56px !important; }
+  h3   { font-size: 20px !important; }
+  #title-block-header,
+  .quarto-title-block { padding: 48px 28px 40px !important; }
+  #title-block-header::after { left: 28px !important; }
+  table { min-width: 680px; }
+}
+
+/* ── Print ──────────────────────────────────────────────────── */
+@media print {
+  #title-block-header,
+  .quarto-title-block { background: #fff !important; padding: 32px 0 !important; }
+  .quarto-title h1.title { color: var(--ink) !important; font-size: 32pt !important; }
+  .quarto-title .subtitle { color: var(--ink-soft) !important; }
+  h2 { page-break-before: always !important; }
+  figure { box-shadow: none !important; }
+}
+
+/* Fix gap between title block and content */
+#title-block-header + * {
+  margin-top: 4px !important;
+}
+
+.quarto-title-block + * {
+  margin-top: 4px !important;
+}
+
+/* Reduce gap between callout note and first heading */
+div.callout-note {
+  margin-bottom: 12px !important;
+}
+
+/* ── Letter card div styles ────────────────────────────────── */
+.letter-card {
+  background: #ffffff !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 6px !important;
+  padding: 36px 44px 32px !important;
+  margin: 32px 0 40px !important;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.07) !important;
+  position: relative !important;
+  overflow: hidden;
+}
+
+.letter-from {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9.5px !important;
+  color: var(--ink-soft) !important;
+  letter-spacing: 1.8px !important;
+  margin-bottom: 20px !important;
+  text-transform: uppercase !important;
+}
+
+.letter-stamp {
+  position: absolute !important;
+  top: 20px !important;
+  right: 28px !important;
+  font-size: 26px !important;
+  border: 1px solid var(--rule) !important;
+  padding: 8px 10px !important;
+  border-radius: 3px !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.letter-greeting {
+  font-family: 'Playfair Display', serif !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+  margin-bottom: 14px !important;
+  line-height: 1.25 !important;
+}
+
+.letter-greeting span {
+  color: var(--blue) !important;
+  font-style: italic !important;
+}
+
+.letter-body {
+  font-family: 'Source Serif 4', serif !important;
+  font-size: 15.5px !important;
+  line-height: 1.78 !important;
+  color: var(--ink-soft) !important;
+  margin-bottom: 20px !important;
+}
+
+.letter-sig {
+  font-family: 'Playfair Display', serif !important;
+  font-style: italic !important;
+  font-size: 16px !important;
+  color: var(--ink) !important;
+  line-height: 1.6 !important;
+  margin-top: 8px !important;
+}

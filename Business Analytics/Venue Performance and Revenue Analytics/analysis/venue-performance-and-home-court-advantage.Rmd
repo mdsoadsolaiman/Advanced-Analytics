@@ -1,0 +1,373 @@
+---
+title: "Venue Performance and Home-Court Advantage"
+author: "Md Soad Solaiman"
+output:
+  pdf_document: default
+---
+
+# Executive Summary
+
+This case study is framed as an advisory analysis for La Commission de Netball. The Commission is evaluating lessons from Australia’s Super Netball competition to support the development and financial planning of a French national competition. The analysis connects match performance, home-court advantage, attendance and venue income.
+
+Teams recorded more wins at home, and the median goal ratio was higher for home matches. Home attendance showed a weak positive visual relationship with venue income and no clear relationship with final competition points. Final points showed a strong positive visual relationship with income per spectator in this dataset.
+
+# Business Context
+
+La Commission de Netball wants to understand how local team support could contribute to league and venue planning. Super Netball provides an established competition in which home and away performance, spectator activity and season-level venue income can be examined together. The intended audience is the Commission’s non-technical leadership, so the results are interpreted as decision evidence rather than technical output alone.
+
+# Business Objectives
+
+The analysis has five objectives:
+
+- compare team performance distributions;
+- assess whether match outcomes and goal ratios indicate a home-court advantage;
+- explore whether stronger competitive performance is associated with greater venue income;
+- examine whether home attendance helps explain venue income; and
+- explore whether income per spectator varies with team performance.
+
+# Dataset
+
+The included dataset contains records for Fever, Firebirds, GIANTS, Lightning, Magpies, Swifts, Thunderbirds and Vixens. Source fields cover team name, state, season-level venue income and 14 round-level match records. Each round record combines venue status, team score, opponent score and attendance in a single text field.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(inspectdf)
+```
+
+```{r load-data}
+netball <- read_csv("../data/netball_0.csv", show_col_types = FALSE)
+dim(netball)
+knitr::kable(
+  head(netball, 5),
+  caption = "Source data preview before cleaning"
+)
+```
+
+# Data Preparation
+
+## Data quality assessment and cleaning
+
+The source contains a duplicated team record, a non-data row and three malformed match values. Matching the corresponding opponent records restores attendance values of 5,397 and 3,665 and an opponent score of 49. Currency formatting is removed from the income field, and the cleaned teams are ordered by state.
+
+The reproducible permutation below preserves the ordering used in the completed analysis.
+
+```{r clean-data}
+set.seed(42)
+netball_perm <- sample_n(netball, size = 10, replace = FALSE)
+
+netball_perm <- netball_perm %>%
+  mutate(`Row ID` = row_number()) %>%
+  relocate(`Row ID`, .after = `Team Names`)
+
+netball_clean <- netball_perm %>%
+  group_by(`Team Names`) %>%
+  filter(`Row ID` == max(`Row ID`)) %>%
+  ungroup() %>%
+  filter(`Team Names` != "*") %>%
+  filter(STATE != "essayer") %>%
+  mutate(`Team Names` = str_replace(`Team Names`, "^Firebids$", "Firebirds")) %>%
+  mutate(across(starts_with("RND"), ~str_replace(., "SSSSSSS attended", "5397 attended"))) %>%
+  mutate(across(starts_with("RND"), ~str_replace(., "55555555555 attended", "3665 attended"))) %>%
+  mutate(across(starts_with("RND"), ~str_replace(., "123456789 against", "49 against"))) %>%
+  mutate(COLLECTED = abs(as.numeric(str_replace_all(COLLECTED, "[\\$,]", "")))) %>%
+  arrange(STATE)
+
+dim(netball_clean)
+```
+
+## Reshaping and variable preparation
+
+Round columns are reshaped into one record per team and round. Regular-expression extraction separates each record into venue status, team score, opponent score and attendance. Variable names and data types are then standardised.
+
+```{r reshape-data}
+netball_long <- gather(
+  netball_clean,
+  key = "Rnd",
+  value = "Record",
+  starts_with("RND")
+)
+
+netball_long <- netball_long %>%
+  mutate(Rnd = str_match(netball_long$Rnd, "\\d+")[, 1])
+netball_long$Rnd <- as.factor(netball_long$Rnd)
+
+details <- str_match(
+  netball_long$Record,
+  "^(home|away), (\\d+) for, (\\d+) against, (\\d+) attended$"
+)
+
+netball_long <- netball_long %>%
+  mutate(
+    `At Home` = details[, 2],
+    Score = as.integer(details[, 3]),
+    Against = as.integer(details[, 4]),
+    Attendance = as.integer(details[, 5])
+  ) %>%
+  mutate(Record = NULL) %>%
+  mutate(`Row ID` = NULL) %>%
+  mutate(`Row ID T` = row_number()) %>%
+  relocate(`Row ID T`, .before = `Team Names`)
+
+netball_tame <- netball_long %>%
+  rename(
+    row_id_t = "Row ID T",
+    team_names = "Team Names",
+    state = STATE,
+    collected = COLLECTED,
+    rnd = Rnd,
+    at_home = "At Home",
+    score = Score,
+    against = Against,
+    attendance = Attendance
+  ) %>%
+  relocate(team_names, .before = everything())
+
+inspect_na(netball_tame)
+
+netball_tame <- netball_tame %>%
+  mutate(
+    state = as.factor(state),
+    team_names = as.factor(team_names),
+    rnd = as.integer(rnd),
+    at_home = fct_relevel(as.factor(at_home), "home", "away"),
+    score = as.integer(score),
+    against = as.integer(against),
+    attendance = as.integer(attendance),
+    collected = as.numeric(collected)
+  )
+
+dim(netball_tame)
+```
+
+## Feature engineering
+
+Three performance variables are derived. A match is classified as a win, tie, or loss; competition points are assigned as 4, 2, or 0; and goal ratio is calculated as team score divided by opponent score.
+
+```{r engineer-features}
+netball_final <- netball_tame %>%
+  mutate(
+    result = ifelse(
+      score > against,
+      "win",
+      ifelse(score == against, "tie", "loss")
+    ),
+    points = ifelse(
+      result == "win",
+      4,
+      ifelse(result == "tie", 2, 0)
+    ),
+    goal_ratio = round(score / against, 2)
+  ) %>%
+  mutate(
+    row_id_t = NULL,
+    state = NULL,
+    against = NULL
+  )
+
+dim(netball_final)
+knitr::kable(
+  head(netball_final, 10),
+  caption = "Analysis-ready match records"
+)
+```
+
+# Exploratory Data Analysis
+
+## Team performance distributions
+
+Score distributions show that some teams achieved consistently higher scores, while others varied more widely. Goal ratio adds opponent performance to the comparison: a high score can still produce a lower ratio when the opponent also scores strongly.
+
+```{r team-score-distribution}
+ggplot(netball_final, aes(x = team_names, y = score)) +
+  geom_boxplot(fill = "#4C78A8", alpha = 0.75) +
+  labs(
+    title = "Distribution of Team Scores Across Matches",
+    subtitle = "Round-level scores across the season",
+    x = "Team",
+    y = "Match score"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
+```
+
+```{r team-goal-ratio-distribution}
+ggplot(netball_final, aes(x = team_names, y = goal_ratio)) +
+  geom_boxplot(fill = "#72B7B2", alpha = 0.75) +
+  labs(
+    title = "Distribution of Team Goal Ratios Across Matches",
+    subtitle = "Team score divided by opponent score",
+    x = "Team",
+    y = "Goal ratio"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
+```
+
+# Statistical Analysis
+
+## Home-court performance
+
+The win count and goal-ratio distribution compare home and away performance. Teams recorded more wins at home, and the median goal ratio was higher for home matches. These descriptive patterns suggest a home-court advantage in this dataset.
+
+```{r home-court-summary}
+home_win_summary <- netball_final %>%
+  filter(result == "win") %>%
+  count(at_home)
+
+knitr::kable(
+  home_win_summary,
+  caption = "Match wins by home and away status"
+)
+
+netball_plot_data <- netball_final %>%
+  filter(!is.na(goal_ratio))
+
+ggplot(netball_plot_data, aes(x = at_home, y = goal_ratio, fill = at_home)) +
+  geom_boxplot(alpha = 0.8) +
+  scale_fill_manual(values = c("home" = "#4C78A8", "away" = "#F58518")) +
+  labs(
+    title = "Home and Away Goal Ratio Distribution",
+    subtitle = "Distribution of round-level goal ratios by venue status",
+    x = "Match location",
+    y = "Goal ratio",
+    fill = "Location"
+  ) +
+  theme_minimal()
+```
+
+## Venue income summary
+
+Season-level venue income is combined with total competition points and cumulative home attendance. Income per spectator is total collected income divided by total home attendance.
+
+```{r venue-income-summary}
+team_revenue <- netball_plot_data %>%
+  group_by(team_names) %>%
+  summarise(collected = unique(collected))
+
+team_points <- netball_plot_data %>%
+  group_by(team_names) %>%
+  summarise(final_points = sum(points))
+
+home_crowd <- netball_plot_data %>%
+  filter(at_home == "home") %>%
+  group_by(team_names) %>%
+  summarise(total_home_crowd = sum(attendance))
+
+venue_income <- bind_cols(
+  team_revenue,
+  team_points["final_points"],
+  home_crowd["total_home_crowd"]
+)
+
+venue_income <- venue_income %>%
+  mutate(inc_per_spec = round(collected / total_home_crowd, 2))
+
+knitr::kable(
+  venue_income,
+  caption = "Team performance, home attendance and venue income summary"
+)
+```
+
+## Attendance, performance, and income relationships
+
+```{r attendance-and-income}
+ggplot(venue_income, aes(x = total_home_crowd, y = collected)) +
+  geom_point(size = 3, colour = "#4C78A8") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E45756") +
+  labs(
+    title = "Attendance versus Venue Income",
+    subtitle = "Season-level relationship with fitted linear trend",
+    x = "Total home attendance",
+    y = "Venue income"
+  ) +
+  theme_minimal()
+```
+
+The chart indicates a weak positive visual relationship between total home attendance and income. Revenue rises marginally with crowd size, but the observations are widely dispersed. Other revenue components, such as pricing or non-attendance income, may therefore also be important.
+
+```{r attendance-and-performance}
+ggplot(venue_income, aes(x = total_home_crowd, y = final_points)) +
+  geom_point(size = 3, colour = "#4C78A8") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E45756") +
+  labs(
+    title = "Attendance versus Competitive Performance",
+    subtitle = "Total home attendance compared with final competition points",
+    x = "Total home attendance",
+    y = "Final competition points"
+  ) +
+  theme_minimal()
+```
+
+The fitted line is approximately flat and the observations are dispersed. No clear visual relationship is evident between home crowd size and final competition points.
+
+```{r performance-and-income-per-spectator}
+ggplot(venue_income, aes(x = final_points, y = inc_per_spec)) +
+  geom_point(size = 3, colour = "#4C78A8") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#E45756") +
+  labs(
+    title = "Competitive Performance versus Income per Spectator",
+    subtitle = "Final competition points compared with venue income per attendee",
+    x = "Final competition points",
+    y = "Income per spectator"
+  ) +
+  theme_minimal()
+```
+
+The chart shows a strong positive visual relationship between final points and income per spectator. In this dataset, teams with stronger competitive performance also generated more income per attendee.
+
+# Results
+
+The analysis produced four principal results:
+
+- home teams recorded more wins than away teams;
+- the median goal ratio was higher for home matches;
+- home attendance had a weak positive visual relationship with venue income and no clear relationship with competition points; and
+- competition points had a strong positive visual relationship with income per spectator.
+
+# Key Findings
+
+Home-court status is associated descriptively with stronger match performance. Crowd size alone does not explain the differences in venue income or team performance observed across the teams. Competitive performance has the clearest positive visual relationship with income per spectator.
+
+# Recommendations
+
+Venue and team decision-makers should evaluate sporting performance alongside attendance when assessing revenue outcomes. Crowd-growth initiatives may support venue income, but the observed dispersion indicates that pricing and other revenue sources also warrant attention. The positive relationship between performance and income per spectator supports monitoring competitive results in venue revenue planning.
+
+# Limitations
+
+- The analysis covers a small number of teams from one season-level dataset.
+- Most sporting information is real, but some values in the source dataset were added synthetically.
+- Venue income combines several revenue sources and does not include expenses.
+- The fitted lines are exploratory visual summaries; no formal hypothesis tests or causal models were estimated.
+- Observed relationships do not establish that attendance or performance causes higher income.
+
+# Technical Appendix
+
+## Variable definitions
+
+- `team_names`: team identifier.
+- `collected`: total season-level income collected by the home venue.
+- `rnd`: match round.
+- `at_home`: home or away match status.
+- `score`: goals scored by the team.
+- `attendance`: match attendance.
+- `result`: derived win, tie, or loss.
+- `points`: derived competition points.
+- `goal_ratio`: team score divided by opponent score.
+- `final_points`: total competition points by team.
+- `total_home_crowd`: cumulative attendance at home matches.
+- `inc_per_spec`: collected income divided by total home attendance.
+
+## Reproducibility
+
+The report uses `tidyverse` for data import, cleaning, reshaping, feature engineering, aggregation, and plotting. `inspectdf` is used for the missing-value inspection. All file references are relative to the project structure.

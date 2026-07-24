@@ -1,0 +1,949 @@
+---
+title: "South Australia Rental Market Analytics for International Students"
+subtitle: "Rental Affordability, Geographic Differences and Housing-Type Trends"
+description: "Public-data analysis of rental affordability, geographic differences and housing-type trends for international students in South Australia."
+author: "Md Soad Solaiman"
+date: today
+format:
+  html:
+    toc: true
+    toc-title: "Contents"
+    toc-depth: 2
+    toc-location: left
+    toc-expand: 2
+    number-sections: false
+    theme: cosmo
+    fontsize: 1.05em
+    linestretch: 1.9
+    fig-align: center
+    fig-cap-location: bottom
+    fig-width: 9
+    fig-height: 5.5
+    smooth-scroll: true
+    embed-resources: true
+    page-layout: article
+    grid:
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 100px
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(patchwork)
+library(knitr)
+library(kableExtra)
+
+
+file_path <- "data/processed/rental-data-tidy.xlsx"
+
+grand_total_tidy <- read_excel(file_path, sheet = "Grand Total Tidy")
+bedroom_tidy     <- read_excel(file_path, sheet = "Bedroom Wise Tidy")
+time_series_tidy <- read_excel(file_path, sheet = "Time Series Tidy")
+
+bedroom_tidy <- bedroom_tidy %>%
+  mutate(bedroom_type = recode(bedroom_type, "4 Bedrooms" = "4 bedrooms"))
+
+# ── Shared design system 
+COL_FLAT      <- "#1A6EA8"
+COL_FLAT_FILL <- "#4A9FD5"
+COL_HOUSE     <- "#C0392B"
+COL_HOUSE_FILL<- "#E8665A"
+COL_BG        <- "#F7F9FC"
+COL_PANEL     <- "#FFFFFF"
+COL_STRIP     <- "#455A64"
+COL_GRID      <- "gray91"
+SZ_TITLE      <- 15
+SZ_SUBTITLE   <- 10
+SZ_CAPTION    <- 8
+SZ_LABEL      <- 3.0
+
+theme_sa <- function(flip = FALSE) {
+  theme_minimal(base_size = 13) +
+    theme(
+      plot.background  = element_rect(fill = COL_BG,    color = NA),
+      panel.background = element_rect(fill = COL_PANEL, color = NA),
+      plot.title       = element_text(hjust = 0, face = "bold",
+                                      size = SZ_TITLE, color = "#1A252F",
+                                      margin = margin(b = 4)),
+      plot.subtitle    = element_text(hjust = 0, color = "gray45",
+                                      size = SZ_SUBTITLE, margin = margin(b = 12)),
+      plot.caption     = element_text(color = "gray55", size = SZ_CAPTION,
+                                      hjust = 1, margin = margin(t = 6)),
+      plot.margin      = margin(16, 20, 12, 16),
+      axis.text.x      = element_text(size = 10, color = "gray30",
+                                      face = if (flip) "plain" else "bold"),
+      axis.text.y      = element_text(size = 10, color = "gray30",
+                                      face = if (flip) "bold" else "plain"),
+      axis.title.x     = element_text(face = "bold", color = "gray30",
+                                      size = 10, margin = margin(t = 8)),
+      axis.title.y     = element_text(face = "bold", color = "gray30",
+                                      size = 10, margin = margin(r = 8)),
+      panel.grid.major.x = if (flip) element_line(color = COL_GRID, linewidth = 0.4)
+                           else element_blank(),
+      panel.grid.major.y = if (flip) element_blank()
+                           else element_line(color = COL_GRID, linewidth = 0.4),
+      panel.grid.minor = element_blank(),
+      strip.text       = element_text(face = "bold", size = 11, color = "white",
+                                      margin = margin(6, 0, 6, 0)),
+      strip.background = element_rect(fill = COL_STRIP, color = NA),
+      legend.position  = "top",
+      legend.justification = "left",
+      legend.text      = element_text(size = 11, color = "gray20"),
+      legend.key.size  = unit(0.5, "cm"),
+      legend.key.width = unit(1.0, "cm"),
+      legend.margin    = margin(b = 4)
+    )
+}
+
+scale_fill_dwelling <- function(...) {
+  scale_fill_manual(values = c("Flat" = COL_FLAT_FILL, "House" = COL_HOUSE_FILL), ...)
+}
+scale_color_dwelling <- function(...) {
+  scale_color_manual(values = c("Flat" = COL_FLAT, "House" = COL_HOUSE), ...)
+}
+```
+
+---
+
+::: {.callout-note appearance="simple"}
+**Data:** SA Government Private Rent Report (2020–2025)
+:::
+
+---
+
+## The Letter That Started Everything
+
+It arrived on a Tuesday morning in December 2024. I read it once, then again, then a third time to be sure. It read:
+
+::: {.letter-card}
+<div class="letter-from">FROM · UNIVERSITY ADMISSIONS OFFICE</div>
+<div class="letter-stamp">🎓</div>
+
+<div class="letter-greeting">Congratulations, <span>Soad.</span></div>
+
+<div class="letter-body">
+We are delighted to inform you that your application for the Master of Data Science program has been accepted. ... ... ...
+</div>
+
+<div class="letter-sig">Warm regards,<br>The Admissions Office</div>
+:::
+
+The next few hours were a blur of phone calls and celebration. But by the next morning, a quieter, more practical question had settled in — one that every international student eventually faces.
+
+**Where am I going to live?**
+
+I opened a real estate website, and the numbers left me with more questions than answers. Which suburb? What's the difference between a flat and a house? Is \$580 a week normal? Am I being overcharged? Is there something cheaper? Can I even afford this on a student income?
+
+This is not just my story. It is the story of every international student who arrives in Adelaide holding an acceptance letter and a suitcase, with no real sense of the rental landscape they are about to enter.
+
+So I did what any data science student should do: I gathered six years of South Australian rental records from the SA Government Data Directory and built this guide for future students — a rental story of South Australia.
+
+::: {.callout-tip}
+## About this guide
+All rent figures are **median weekly rent in AUD**. A student income of **\$800/week** is assumed throughout, based on the 24-hour/week work limit under a student visa at approximately **\$35/hour** after tax for the standard analysis. An interactive affordability calculator is also available in Chapter 8.
+:::
+
+## Chapter 1 — Yes, It Is Going Up. Every Year.
+
+Before asking *where* or *what type*, a student needs to understand the market's basic direction. The answer is direct: rents in South Australia have increased every year.
+
+```{r}
+#| label: fig-g1
+#| fig-cap: "Median weekly rent across all of South Australia. Labels show the year-on-year growth rate. Source: SA Government Private Rent Report."
+#| fig-alt: "Column chart of statewide median weekly rent for selected Q4 observations from 2020 to 2025, with dollar values and year-on-year percentage changes labelled above the columns."
+#| fig-height: 5
+#| fig-width: 9
+
+overall_rent_trend <- grand_total_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(area_group == "All Grand Total", dwelling_type == "All", bedroom_type == "All") %>%
+  arrange(year) %>%
+  mutate(
+    increment_rate = (`median ($)` - lag(`median ($)`)) / lag(`median ($)`) * 100,
+    rate_label     = ifelse(is.na(increment_rate), "", paste0("+", round(increment_rate, 1), "%")),
+    value_label    = paste0("$", `median ($)`)
+  )
+
+ggplot(overall_rent_trend, aes(x = factor(year), y = `median ($)`)) +
+  geom_col(fill = COL_FLAT_FILL, width = 0.55, alpha = 0.93) +
+  geom_text(aes(label = value_label), vjust = 1.5, size = SZ_LABEL,
+            color = "white", fontface = "bold") +
+  geom_text(aes(label = rate_label), vjust = -0.5, size = SZ_LABEL,
+            fontface = "bold", color = "gray25") +
+  scale_y_continuous(breaks = seq(0, 700, by = 100), limits = c(0, 700),
+                     labels = dollar_format(prefix = "$"),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title    = "Overall Rent Trend in SA (2020–2025)",
+    subtitle = "Median weekly rent has risen every year — the starting point for any student planning their budget",
+    caption  = "Source: SA Government Private Rent Report",
+    x = NULL, y = "Median weekly rent ($)"
+  ) +
+  theme_sa(flip = FALSE)
+```
+
+
+For many years, Adelaide was known as one of Australia's more affordable cities for students. Finding a place to rent was rarely the biggest concern when planning to move. That changed during the COVID period.
+
+Borders were closed. Universities went online. International students stopped arriving almost overnight. For a brief moment, the rental market exhaled. Demand dropped. Landlords held their prices. In 2020, the SA-wide median weekly rent was **\$345**.
+
+Unforetunately, tt did not last long.
+
+When Australia reopened its borders in late 2021, the demand that had been building for nearly two years hit the market all at once. Students, migrants, and returning people flooded back simultaneously. There simply were not enough properties to absorb them. By 2023, rents had surged by nearly **17%** in a single year.
+
+
+But there is some comfort in what has happened since. Growth has been slowing from that peak of nearly 17% down to around **9%** in 2024, and closer to **6%** by 2025. The market is moderating. The fever has broken, somewhat. But rents are still going up. Just less violently than before.
+
+
+## Chapter 2 — Metro vs The Rest of SA
+
+Adelaide feels immediately welcoming on arrival — compact, walkable, and easy to navigate. The rental market, however, is not nearly as unified. It is effectively two very different markets, and which one a student enters will shape their financial experience for the duration of their studies.
+
+The first is **Metro Adelaide** — the greater city, the suburbs, the university campuses, the cafés, and the train lines. The second is the **Rest of State** — regional towns, coastal communities, farming country, and open space. For students, the relevant market depends largely on the location of their campus.
+
+```{r}
+#| label: fig-g2
+#| fig-cap: "Metro Adelaide has consistently higher rents. Regional SA is cheaper but the gap has been narrowing. Source: SA Government Private Rent Report."
+#| fig-alt: "Grouped column chart comparing Metro Adelaide and Rest of State median weekly rent for selected Q4 observations from 2020 to 2025, with values and annual percentage changes labelled."
+#| fig-height: 5
+#| fig-width: 9
+
+metro_rest_trend <- grand_total_tidy %>%
+  mutate(
+    year = as.numeric(year), `median ($)` = as.numeric(`median ($)`),
+    area_group = case_when(
+      area_group == "Metro Grand Total"      ~ "Metro",
+      area_group == "Rest state grand Total" ~ "Rest of State",
+      TRUE ~ area_group
+    )
+  ) %>%
+  filter(area_group %in% c("Metro", "Rest of State"),
+         dwelling_type == "All", bedroom_type == "All") %>%
+  mutate(area_group = factor(area_group, levels = c("Rest of State", "Metro"))) %>%
+  arrange(area_group, year) %>%
+  group_by(area_group) %>%
+  mutate(
+    increment_rate = (`median ($)` - lag(`median ($)`)) / lag(`median ($)`) * 100,
+    rate_label = ifelse(is.na(increment_rate), "", paste0("+", round(increment_rate, 1), "%")),
+    value_label = paste0("$", `median ($)`)
+  ) %>%
+  ungroup()
+
+COL_METRO <- "#4FA3A5"
+COL_ROS   <- "#E07A5F"
+
+ggplot(metro_rest_trend, aes(x = factor(year), y = `median ($)`, fill = area_group)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.65, alpha = 0.92) +
+  geom_text(aes(label = value_label, group = area_group),
+            position = position_dodge(width = 0.7),
+            vjust = 1.5, size = SZ_LABEL, color = "white", fontface = "bold") +
+  geom_text(aes(label = rate_label, group = area_group),
+            position = position_dodge(width = 0.7),
+            vjust = -0.5, size = SZ_LABEL, fontface = "bold", color = "gray25") +
+  scale_fill_manual(values = c("Rest of State" = COL_ROS, "Metro" = COL_METRO)) +
+  scale_y_continuous(breaks = seq(0, 700, by = 100), limits = c(0, 700),
+                     labels = dollar_format(prefix = "$"),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title    = "Metro vs Rest of State Rent Trend (2020–2025)",
+    subtitle = "Metro Adelaide is more expensive and both regions have risen sharply — students near the city feel this most",
+    caption  = "Source: SA Government Private Rent Report",
+    x = NULL, y = "Median weekly rent ($)", fill = NULL
+  ) +
+  theme_sa(flip = FALSE)
+```
+
+
+Both markets moved together through the post-COVID years, rising steadily through 2021 and 2022. Then 2023 arrived: Metro rents surged to **\$500**, a **+16.3% jump**, while Regional SA rose **+15.2%** — indicating the shock hit everywhere at once.
+
+What happened next is where the trend becomes more interesting. From 2024 onwards, Metro began to cool, with growth slowing to **+10%** in 2024 and just **+5.5%** by 2025. Regional growth, however, stayed stubbornly high — **+7.9%** in 2024 and **+9.8%** in 2025 — meaning the regions were now rising faster than the city itself.
+
+The pattern is clear: Metro is expensive but stabilizing, while Regional SA is cheaper but accelerating.
+
+## Chapter 3 — Flat or House?
+
+Every student arriving in Adelaide faces the same early question, and the answer largely comes down to rent.
+
+```{r}
+#| label: fig-combined1
+#| fig-cap: "Left panels: flat and house rents by year. Right panels: the dollar gap between house and flat rents. The gap in regional SA has grown dramatically. Source: SA Government Private Rent Report."
+#| fig-alt: "Four-panel comparison of flat and house median weekly rents and the house-minus-flat rent gap for Metro Adelaide and Rest of State from 2020 to 2025."
+#| fig-height: 8
+#| fig-width: 11
+
+trend_data <- grand_total_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(area_group %in% c("Metro", "Rest of State"),
+         dwelling_type %in% c("Flat", "House"), bedroom_type == "All") %>%
+  select(year, area_group, dwelling_type, `median ($)`)
+
+gap_data <- trend_data %>%
+  pivot_wider(names_from = dwelling_type, values_from = `median ($)`) %>%
+  mutate(gap = House - Flat)
+
+COL_GAP_LINE <- "#1A6EA8"
+COL_GAP_AREA <- "#ADD8F7"
+
+make_bar <- function(data, title_text) {
+  ggplot(data, aes(x = `median ($)`, y = factor(year), fill = dwelling_type)) +
+    geom_col(aes(alpha = ifelse(year == 2025, "current", "past")),
+             position = position_dodge(width = 0.7), width = 0.65) +
+    scale_alpha_manual(values = c("current" = 0.95, "past" = 0.55), guide = "none") +
+    geom_text(aes(label = paste0("$", `median ($)`), group = dwelling_type),
+              position = position_dodge(width = 0.7),
+              hjust = -0.12, size = 2.9, fontface = "bold", color = "gray20") +
+    scale_fill_dwelling() +
+    scale_x_continuous(breaks = seq(0, 600, by = 200), limits = c(0, 620),
+                       labels = dollar_format(prefix = "$"),
+                       expand = expansion(mult = c(0, 0.06))) +
+    labs(title = title_text, x = "Median weekly rent ($)", y = NULL, fill = NULL) +
+    theme_sa(flip = TRUE) +
+    theme(plot.title = element_text(size = 12))
+}
+
+make_gap <- function(data, title_text) {
+  data <- data %>% arrange(year) %>%
+    mutate(pct_change = round((gap - lag(gap)) / lag(gap) * 100, 1))
+  ggplot(data, aes(x = year, y = gap)) +
+    geom_area(fill = COL_GAP_AREA, alpha = 0.30) +
+    geom_line(color = COL_GAP_LINE, linewidth = 1.2) +
+    geom_point(aes(fill = ifelse(year == 2025, "hi", "lo")),
+               size = 3.2, shape = 21, stroke = 1.8, color = COL_GAP_LINE) +
+    scale_fill_manual(values = c("lo" = "white", "hi" = COL_GAP_LINE), guide = "none") +
+    geom_text(aes(label = paste0("$", gap)), vjust = -1, size = 3.0,
+              fontface = "bold", color = COL_GAP_LINE) +
+    geom_text(data = data %>% filter(!is.na(pct_change)),
+              aes(label = ifelse(pct_change >= 0,
+                                 paste0("+", pct_change, "%"), paste0(pct_change, "%"))),
+              vjust = 2.0, size = 2.5, fontface = "italic", color = "gray50") +
+    scale_x_continuous(breaks = unique(data$year)) +
+    scale_y_continuous(breaks = seq(0, 400, by = 50),
+                       limits = c(0, max(data$gap) * 1.35),
+                       labels = dollar_format(prefix = "$"),
+                       expand = expansion(mult = c(0, 0.05))) +
+    labs(title = title_text, x = "Year", y = "House minus Flat gap ($)") +
+    theme_sa(flip = FALSE) +
+    theme(plot.title = element_text(size = 12))
+}
+
+metro_bar <- make_bar(trend_data %>% filter(area_group == "Metro"),
+                      "Metro Adelaide — Weekly Rent by Dwelling Type")
+metro_gap <- make_gap(gap_data %>% filter(area_group == "Metro"),
+                      "Metro Adelaide — House vs Flat Gap Trend")
+ros_bar   <- make_bar(trend_data %>% filter(area_group == "Rest of State"),
+                      "Rest of State — Weekly Rent by Dwelling Type")
+ros_gap   <- make_gap(gap_data %>% filter(area_group == "Rest of State"),
+                      "Rest of State — House vs Flat Gap Trend")
+
+(metro_bar | metro_gap) / (ros_bar | ros_gap) +
+  plot_annotation(
+    title    = "Flat vs House: The Growing Price Gap (2020–2025)",
+    subtitle = "The gap between flat and house rents has widened — choosing a flat is increasingly the smarter budget decision",
+    caption  = "Source: SA Government Private Rent Report",
+    theme    = theme(
+      plot.title      = element_text(face = "bold", size = SZ_TITLE, color = "#1A252F", hjust = 0),
+      plot.subtitle   = element_text(color = "gray45", size = SZ_SUBTITLE, margin = margin(b = 12)),
+      plot.caption    = element_text(color = "gray55", size = SZ_CAPTION, hjust = 1),
+      plot.background = element_rect(fill = COL_BG, color = NA)
+    )
+  )
+```
+
+In 2020, the difference between renting a flat and a house was relatively small across South Australia, and for many renters the choice was still driven by lifestyle rather than cost.
+
+As the years passed, houses began pulling away. In Metro Adelaide, the gap widened quickly, reaching its peak in 2023. By 2025, the gap had narrowed to approximately **\$100** and continues to trend downward.
+
+Regional South Australia followed a different path. There, the gap expanded year after year without interruption, with houses moving further ahead while flat rents rose more slowly. By 2025, the separation between the two dwelling types had reached approximately **\$170** and continues to trend upward.
+
+
+## Chapter 4 — The Map of Metro Adelaide: Four Zones, Four Price Points
+
+Once a student has decided to rent in Metro Adelaide, the next question is where. Metro Adelaide divides into four broad geographic rental zones, and they have meaningfully different price levels.
+
+```{r}
+#| label: fig-map
+#| fig-cap: "Metro Adelaide divided into four rental zones. Bubble size proportional to median rent (2020–2025). Growth since 2020 shown for each zone. Source: SA Government Private Rent Report. Region boundaries are approximate."
+#| fig-alt: "Approximate map of four Metro Adelaide rental zones with labelled median rent summaries, percentage changes and an inset map showing South Australian regional observations."
+#| fig-height: 8
+#| fig-width: 9
+
+# ── Map libraries
+library(ozmaps)
+library(sf)
+
+col_bg        <- "#F4F6F9"
+col_ocean     <- "#C9DFF0"
+col_land_base <- "#EDF0E8"
+col_grid      <- "#DDE3EC"
+col_N <- "#BFE6E7"; txt_N <- "#1A4A6B"
+col_E <- "#F5C9A0"; txt_E <- "#7A3B10"
+col_S <- "#C9B8E8"; txt_S <- "#3D1F6B"
+col_W <- "#AEDBC5"; txt_W <- "#1A5C3A"
+col_bubble <- "#36454F"; col_cbd <- "orange"
+
+rent_overall <- bedroom_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(area_group == "Metro") %>%
+  group_by(region) %>%
+  summarise(rent = round(median(`median ($)`, na.rm = TRUE), 0), .groups = "drop")
+
+rent_2020_map <- bedroom_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(year == 2020, area_group == "Metro") %>%
+  group_by(region) %>%
+  summarise(rent_2020 = round(median(`median ($)`, na.rm = TRUE), 0), .groups = "drop")
+
+rent_2025_ros <- time_series_tidy %>%
+  mutate(year = as.numeric(year), value = as.numeric(value)) %>%
+  filter(year == 2025, measure == "Total Median", area_group == "Rest of State") %>%
+  select(region, rent = value)
+
+sa_state <- ozmap_states %>% filter(NAME == "South Australia") %>% st_transform(4326)
+cbd_lon <- 138.601; cbd_lat <- -34.929; cbd <- c(cbd_lon, cbd_lat)
+far_NW <- c(138.42,-34.40); far_NE <- c(138.78,-34.40)
+far_SE <- c(138.70,-35.44); far_SW <- c(138.22,-35.44); far_W_top <- c(138.22,-34.40)
+metro_box <- st_as_sfc(st_bbox(c(xmin=138.18,xmax=139.15,ymin=-35.45,ymax=-34.38),crs=4326))
+
+make_wedge <- function(...) {
+  pts <- rbind(cbd, ..., cbd)
+  st_polygon(list(pts)) %>% st_sfc(crs = 4326) %>% st_sf()
+}
+clip_wedge <- function(w) {
+  w2 <- st_intersection(w %>% st_geometry(), metro_box)
+  st_intersection(sa_state %>% st_geometry(), w2) %>% st_sf()
+}
+wN <- clip_wedge(make_wedge(far_NW, far_NE))
+wE <- clip_wedge(make_wedge(far_NE, far_SE))
+wS <- clip_wedge(make_wedge(far_SE, far_SW))
+wW <- clip_wedge(make_wedge(far_SW, far_W_top, far_NW))
+
+metro_data <- tibble(
+  region = c("Northern Adelaide","Eastern Adelaide","Southern Adelaide","Western Adelaide"),
+  lon = c(138.60, 138.70, 138.54, 138.44),
+  lat = c(-34.72, -34.88, -35.12, -34.87)
+) %>%
+  left_join(rent_overall,  by = "region") %>%
+  left_join(rent_2020_map, by = "region") %>%
+  mutate(pct_change = round((rent - rent_2020) / rent_2020 * 100, 1))
+
+cbd_pt <- tibble(lon = cbd_lon, lat = cbd_lat)
+ros_coords <- tibble(
+  region = c("Adelaide Hills","Barossa","Fleurieu and KI","Eyre and Western",
+             "Far North","Limestone Coast","Murray and Mallee","Yorke and Mid North"),
+  lon = c(138.92,138.98,138.62,133.20,136.50,140.55,139.55,137.80),
+  lat = c(-35.02,-34.50,-35.62,-32.50,-29.80,-37.10,-34.55,-34.20)
+)
+ros_data <- ros_coords %>% left_join(rent_2025_ros, by = "region")
+rv <- function(r) metro_data$rent[metro_data$region == r]
+pv <- function(r) metro_data$pct_change[metro_data$region == r]
+
+p_main <- ggplot() +
+  geom_sf(data = sa_state, fill = col_land_base, color = "gray55", linewidth = 0.45) +
+  geom_sf(data = wN, fill = col_N, color = NA, alpha = 0.85) +
+  geom_sf(data = wE, fill = col_E, color = NA, alpha = 0.85) +
+  geom_sf(data = wS, fill = col_S, color = NA, alpha = 0.85) +
+  geom_sf(data = wW, fill = col_W, color = NA, alpha = 0.85) +
+  annotate("text", x=138.595, y=-34.595, label="NORTHERN  ADELAIDE",
+           hjust=0.5, size=3.5, fontface="bold", color=txt_N, alpha=0.9) +
+  annotate("text", x=138.595, y=-34.640,
+           label=paste0("$",rv("Northern Adelaide")," /wk   \u25b2",pv("Northern Adelaide"),"% since 2020"),
+           hjust=0.5, vjust=1, size=2.8, color=txt_N, alpha=0.85) +
+  annotate("text", x=138.80, y=-34.760, label="EASTERN  ADELAIDE",
+           hjust=0.5, size=3.5, fontface="bold", color=txt_E, alpha=0.9) +
+  annotate("text", x=138.80, y=-34.805,
+           label=paste0("$",rv("Eastern Adelaide")," /wk   \u25b2",pv("Eastern Adelaide"),"% since 2020"),
+           hjust=0.5, vjust=1, size=2.8, color=txt_E, alpha=0.85) +
+  annotate("text", x=138.565, y=-35.180, label="SOUTHERN  ADELAIDE",
+           hjust=0.5, size=3.5, fontface="bold", color=txt_S, alpha=0.9) +
+  annotate("text", x=138.565, y=-35.225,
+           label=paste0("$",rv("Southern Adelaide")," /wk   \u25b2",pv("Southern Adelaide"),"% since 2020"),
+           hjust=0.5, vjust=1, size=2.8, color=txt_S, alpha=0.85) +
+  annotate("text", x=138.360, y=-34.820, label="WESTERN\nADELAIDE",
+           hjust=0.5, size=3.4, fontface="bold", color=txt_W, lineheight=0.85, alpha=0.9) +
+  annotate("text", x=138.360, y=-34.890,
+           label=paste0("$",rv("Western Adelaide")," /wk\n\u25b2",pv("Western Adelaide"),"%"),
+           hjust=0.5, vjust=1, size=2.7, color=txt_W, lineheight=0.9, alpha=0.85) +
+  geom_point(data=metro_data, aes(x=lon, y=lat, size=rent),
+             shape=21, stroke=0, fill=col_bubble, color=NA, alpha=0.88) +
+  geom_point(data=metro_data, aes(x=lon, y=lat, size=rent),
+             shape=21, stroke=2.0, fill=NA, color="white", alpha=0.95) +
+  geom_text(data=metro_data, aes(x=lon, y=lat, label=paste0("$",rent)),
+            size=4.0, fontface="bold", color=col_bubble) +
+  geom_point(data=cbd_pt, aes(x=lon, y=lat),
+             shape=21, size=4.5, fill=col_cbd, color="white", stroke=1.8) +
+  annotate("text", x=138.622, y=-34.921, label="CBD",
+           size=2.8, fontface="bold", color=col_cbd, hjust=0) +
+  annotate("text", x=137.96, y=-34.90, label="Gulf  St  Vincent",
+           size=2.9, color="#4A8DB5", fontface="italic", angle=90, alpha=0.9) +
+  annotate("rect", xmin=138.94, xmax=139.14, ymin=-35.42, ymax=-35.10,
+           fill="white", color="gray75", linewidth=0.4, alpha=0.92) +
+  annotate("rect", xmin=138.95, xmax=138.975, ymin=-35.155, ymax=-35.130, fill=col_N, color=NA) +
+  annotate("text", x=138.982, y=-35.1425, label="Northern", hjust=0, size=2.5, color="gray20") +
+  annotate("rect", xmin=138.95, xmax=138.975, ymin=-35.200, ymax=-35.175, fill=col_E, color=NA) +
+  annotate("text", x=138.982, y=-35.1875, label="Eastern",  hjust=0, size=2.5, color="gray20") +
+  annotate("rect", xmin=138.95, xmax=138.975, ymin=-35.245, ymax=-35.220, fill=col_S, color=NA) +
+  annotate("text", x=138.982, y=-35.2325, label="Southern", hjust=0, size=2.5, color="gray20") +
+  annotate("rect", xmin=138.95, xmax=138.975, ymin=-35.290, ymax=-35.265, fill=col_W, color=NA) +
+  annotate("text", x=138.982, y=-35.2775, label="Western",  hjust=0, size=2.5, color="gray20") +
+  annotate("text", x=139.045, y=-35.118,  label="Region",
+           hjust=0.5, size=2.6, color="gray30", fontface="bold") +
+  annotate("segment", x=139.09, xend=139.09, y=-35.30, yend=-35.17,
+           arrow=arrow(length=unit(0.20,"cm"), type="closed"),
+           color="gray30", linewidth=0.9) +
+  annotate("text", x=139.09, y=-35.15, label="N",
+           size=3.2, fontface="bold", color="gray30", vjust=0, hjust=0.5) +
+  annotate("rect", xmin=138.27, xmax=138.365, ymin=-35.318, ymax=-35.308,
+           fill="gray30", color=NA) +
+  annotate("text", x=138.317, y=-35.298, label="10 km",
+           size=2.4, color="gray30", vjust=0, hjust=0.5) +
+  scale_size_continuous(range = c(13, 21), guide = "none") +
+  coord_sf(xlim=c(137.80,139.18), ylim=c(-35.42,-34.40), expand=FALSE) +
+  labs(
+    title    = "Metro Adelaide \u2014 Median Weekly Rent by Region (2020\u20132025 Average)",
+    subtitle = "Eastern Adelaide is the most expensive zone \u00b7 Four zones, four price points",
+    caption  = "Source: SA Government Private Rent Report \u00b7 Region boundaries are approximate",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title       = element_text(face="bold", size=14.5, color="#1A252F",
+                                    hjust=0, margin=margin(b=4)),
+    plot.subtitle    = element_text(color="gray45", size=9.5, hjust=0, margin=margin(b=6)),
+    plot.caption     = element_text(color="gray55", size=8, hjust=1, margin=margin(t=6)),
+    plot.background  = element_rect(fill=col_bg, color=NA),
+    plot.margin      = margin(14,14,10,14),
+    panel.background = element_rect(fill=col_ocean, color=NA),
+    panel.border     = element_rect(fill=NA, color="gray65", linewidth=0.5),
+    panel.grid.major = element_line(color=col_grid, linewidth=0.2),
+    panel.grid.minor = element_blank(),
+    axis.text        = element_blank(),
+    axis.ticks       = element_blank(),
+    legend.position  = "none"
+  )
+
+p_inset <- ggplot() +
+  geom_sf(data=sa_state, fill=col_land_base, color="gray45", linewidth=0.35) +
+  annotate("rect", xmin=138.18, xmax=139.18, ymin=-35.44, ymax=-34.38,
+           fill=NA, color="#E67E22", linewidth=1.0) +
+  annotate("text", x=138.68, y=-34.24, label="Metro",
+           size=2.1, color="#E67E22", fontface="bold", hjust=0.5) +
+  geom_point(data=ros_data, aes(x=lon, y=lat, size=rent, fill=rent),
+             shape=21, stroke=0.6, color="white", alpha=0.90) +
+  geom_text(data=ros_data, aes(x=lon, y=lat, label=paste0("$",rent)),
+            size=1.6, fontface="bold", color="white") +
+  scale_fill_gradient(low="#BDD7EE", high="#1F4E79", guide="none") +
+  scale_size_continuous(range=c(2.5,8), guide="none") +
+  coord_sf(xlim=c(129,141.5), ylim=c(-38.5,-26.0), expand=FALSE) +
+  labs(title="South Australia", x=NULL, y=NULL) +
+  theme_minimal(base_size=7) +
+  theme(
+    plot.title       = element_text(face="bold", size=7.5, color="#2C3E50",
+                                    hjust=0.5, margin=margin(b=2)),
+    plot.background  = element_rect(fill="white", color="gray55", linewidth=0.8),
+    plot.margin      = margin(4,4,4,4),
+    panel.background = element_rect(fill=col_ocean, color=NA),
+    panel.grid       = element_blank(),
+    axis.text        = element_blank(),
+    axis.ticks       = element_blank()
+  )
+
+p_main + inset_element(p_inset, left=0.00, bottom=0.72, right=0.28, top=1.00)
+```
+
+
+## Chapter 5 — The 2025 Snapshot: What Does It Actually Cost?
+
+The previous chapters have described how rents got to where they are today. This chart answers the practical question that follows: what did a property actually cost in the most recent year, depending on its location and number of bedrooms?
+
+```{r}
+#| label: fig-bedroom
+#| fig-cap: "Exact 2025 median weekly rent by region, bedroom type and dwelling type. Flat in blue, House in red. Source: SA Government Private Rent Report."
+#| fig-alt: "Faceted column charts comparing 2025 median weekly rent for two- and three-bedroom flats and houses across selected Metro Adelaide and Rest of State regions."
+#| fig-height: 8
+#| fig-width: 12
+
+bedroom_data <- bedroom_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(
+    year == 2025,
+    region %in% c("Eastern Adelaide","Western Adelaide","Northern Adelaide",
+                  "Southern Adelaide","Adelaide Hills","Barossa",
+                  "Eyre and Western","Fleurieu and KI"),
+    bedroom_type  %in% c("2 bedroom", "3 bedroom"),
+    dwelling_type %in% c("Flat", "House")
+  ) %>%
+  mutate(
+    region        = recode(region,
+                           "Eastern Adelaide"  = "Eastern", "Western Adelaide"  = "Western",
+                           "Northern Adelaide" = "Northern","Southern Adelaide" = "Southern"),
+    bedroom_type  = factor(bedroom_type,  levels = c("2 bedroom", "3 bedroom")),
+    dwelling_type = factor(dwelling_type, levels = c("Flat", "House"))
+  ) %>%
+  select(area_group, region, bedroom_type, dwelling_type, `median ($)`)
+
+metro_order <- bedroom_data %>% filter(area_group == "Metro") %>%
+  group_by(region) %>% summarise(avg = mean(`median ($)`)) %>%
+  arrange(desc(avg)) %>% pull(region)
+ros_order <- bedroom_data %>% filter(area_group == "Rest of State") %>%
+  group_by(region) %>% summarise(avg = mean(`median ($)`)) %>%
+  arrange(desc(avg)) %>% pull(region)
+
+metro_bd <- bedroom_data %>% filter(area_group == "Metro") %>%
+  mutate(region = factor(region, levels = metro_order))
+ros_bd <- bedroom_data %>% filter(area_group == "Rest of State") %>%
+  mutate(region = factor(region, levels = ros_order))
+
+make_bedroom_chart <- function(data, title_text) {
+  ggplot(data, aes(x = bedroom_type, y = `median ($)`, fill = dwelling_type)) +
+    geom_col(position = position_dodge(width = 0.7), width = 0.65, alpha = 0.92) +
+    geom_text(aes(label = paste0("$", `median ($)`), group = dwelling_type),
+              position = position_dodge(width = 0.7),
+              vjust = -0.5, size = 2.7, fontface = "bold", color = "gray20") +
+    facet_wrap(~ region, nrow = 1) +
+    scale_fill_dwelling() +
+    scale_y_continuous(breaks = seq(0, 700, by = 100), limits = c(0, 700),
+                       labels = dollar_format(prefix = "$"),
+                       expand = expansion(mult = c(0, 0.08))) +
+    labs(title = title_text, x = NULL, y = "Median weekly rent ($)", fill = NULL) +
+    theme_sa(flip = FALSE) +
+    theme(plot.margin = margin(16, 24, 16, 24), panel.spacing = unit(1.5, "lines"))
+}
+
+metro_chart <- make_bedroom_chart(metro_bd, "Metro Adelaide: Eastern, Western, Northern and Southern")
+ros_chart   <- make_bedroom_chart(ros_bd,   "Rest of State: Adelaide Hills, Barossa, Eyre and Fleurieu")
+
+metro_chart / ros_chart +
+  plot_annotation(
+    title    = "2025 Snapshot: Rent by Region, Bedroom Type and Dwelling Type",
+    subtitle = "A 2-bedroom flat in Northern Adelaide is very different from a 3-bedroom house in Eastern Adelaide",
+    caption  = "Source: SA Government Private Rent Report",
+    theme    = theme(
+      plot.title      = element_text(face = "bold", size = SZ_TITLE, color = "#1A252F", hjust = 0),
+      plot.subtitle   = element_text(color = "gray45", size = SZ_SUBTITLE, margin = margin(b = 12)),
+      plot.caption    = element_text(color = "gray55", size = SZ_CAPTION, hjust = 1),
+      plot.margin     = margin(16, 24, 16, 24),
+      plot.background = element_rect(fill = COL_BG, color = NA)
+    )
+  )
+```
+
+Key comparisons to note from this chart:
+
+```{r}
+#| label: tbl-regions
+#| tbl-cap: "2025 median weekly rent by region and dwelling type. Source: SA Government Private Rent Report."
+
+tibble(
+  Region          = c("Eastern (Metro)","Western (Metro)","Southern (Metro)",
+                      "Northern (Metro)","Adelaide Hills","Barossa","Eyre & Western"),
+  `2BR Flat`      = c("$550","$490","$500","$480","$480","$420","$295"),
+  `2BR House`     = c("$600","$550","$550","$490","$490","$450","$300"),
+  `3BR Flat`      = c("$690","$620","$600","$500","$520","$495","$510"),
+  `3BR House`     = c("$695","$650","$620","$560","$580","$540","$370"),
+  Verdict         = c("Premium","Expensive","Mid-range","Best value","Scenic premium","Regional mid","Cheapest SA")
+) %>%
+  kable(align = c("l","c","c","c","c","l")) %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                full_width = TRUE, font_size = 14) %>%
+  row_spec(4, bold = TRUE, background = "#d5f5e3") %>%
+  row_spec(7, background = "#eaf7fb")
+```
+
+---
+
+
+## Chapter 6 — The Real Question: Can It Be Afforded on \$800 a Week?
+
+The previous chapters have described the market. This one measures it against a student's actual income. A student on a visa, working the maximum allowed 24 hours per week at approximately \$35 per hour, earns around **\$800 per week**. That is the budget — now comes the hard part.
+
+Housing experts define **stress** as spending more than **30% of income on rent**. Beyond **50%** is considered **severe**. Both lines are marked on the chart.
+
+```{r}
+#| label: fig-afford
+#| fig-cap: "Rent as a percentage of weekly student income ($800) across all SA regions in 2025. The 30% stress and 50% severe stress thresholds are shown. Source: SA Government Private Rent Report."
+#| fig-alt: "Horizontal grouped columns showing 2025 flat and house median rent as a percentage of an assumed 800 dollar weekly income across Metro Adelaide and Rest of State regions, with 30 and 50 percent reference lines."
+#| fig-height: 7
+#| fig-width: 11
+
+STUDENT_INCOME <- 800
+threshold      <- round(STUDENT_INCOME * 0.30, 0)
+
+affordability <- time_series_tidy %>%
+  mutate(year = as.numeric(year), value = as.numeric(value)) %>%
+  filter(year == 2025, measure %in% c("Flat Median", "House Median")) %>%
+  mutate(
+    dwelling_type = recode(measure, "Flat Median" = "Flat", "House Median" = "House"),
+    rent_pct      = (value / STUDENT_INCOME) * 100,
+    region_short  = recode(region,
+                           "Eastern Adelaide"    = "Eastern",    "Western Adelaide"    = "Western",
+                           "Northern Adelaide"   = "Northern",   "Southern Adelaide"   = "Southern",
+                           "Eyre and Western"    = "Eyre & Western","Fleurieu and KI"   = "Fleurieu & KI",
+                           "Yorke and Mid North" = "Yorke & Mid North","Murray and Mallee" = "Murray & Mallee",
+                           "Limestone Coast"     = "Limestone Coast","Far North"         = "Far North",
+                           "Adelaide Hills"      = "Adelaide Hills","Barossa"            = "Barossa"),
+    dwelling_type = factor(dwelling_type, levels = c("Flat","House")),
+    area_group    = factor(area_group,    levels = c("Metro","Rest of State"))
+  ) %>%
+  group_by(area_group) %>%
+  mutate(region_short = reorder(region_short, rent_pct)) %>%
+  ungroup()
+
+ggplot(affordability, aes(x = rent_pct, y = region_short, fill = dwelling_type)) +
+  geom_vline(xintercept = 30, linetype = "dashed", color = "#E05A2B", linewidth = 0.8, alpha = 0.8) +
+  geom_vline(xintercept = 50, linetype = "dashed", color = "#C0392B", linewidth = 0.8, alpha = 0.8) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6, alpha = 0.88) +
+  geom_text(aes(label = paste0(round(rent_pct, 0), "%"), group = dwelling_type),
+            position = position_dodge(width = 0.7),
+            hjust = -0.15, size = SZ_LABEL, fontface = "bold", color = "gray20") +
+  annotate("text", x = 31, y = 0.6, label = "30%\nstress",
+           hjust = 0, size = 2.7, color = "#E05A2B", fontface = "italic") +
+  annotate("text", x = 51, y = 0.6, label = "50%\nsevere",
+           hjust = 0, size = 2.7, color = "#C0392B", fontface = "italic") +
+  facet_wrap(~ area_group, scales = "free_y", ncol = 2) +
+  scale_fill_dwelling() +
+  scale_x_continuous(breaks = seq(0, 100, by = 20), limits = c(0, 110),
+                     labels = function(x) paste0(x, "%"),
+                     expand = expansion(mult = c(0, 0.02))) +
+  labs(
+    title    = "Rent as a Share of Student Income by Region (2025)",
+    subtitle = paste0("Assumed student income: $", STUDENT_INCOME,
+                      " per week. Most regions push past the 30% stress line when renting alone."),
+    caption  = "Source: SA Government Private Rent Report",
+    x = "Rent as % of weekly income", y = NULL, fill = NULL
+  ) +
+  theme_sa(flip = TRUE) +
+  theme(panel.spacing = unit(2, "lines"))
+```
+
+::: {.callout-warning}
+## Renting alone is not viable
+On \$800 per week, renting alone — in any type of house or flat — is not financially viable.
+:::
+
+
+## Chapter 7 — The Solution: Sharing
+
+The previous chapter ended on an uncomfortable finding: renting alone does not work on a student income. But the data does not leave things there — it also shows exactly what does work.
+
+```{r}
+#| label: fig-cpp
+#| fig-cap: "Weekly rent per person when sharing (2-bedroom = 2 sharing, 3-bedroom = 3 sharing). Red shaded zone indicates above the $240 stress threshold. Source: SA Government Private Rent Report."
+#| fig-alt: "Dot-and-line comparison of weekly rent per person for two people sharing a two-bedroom property and three people sharing a three-bedroom property across South Australian regions, with a 240 dollar reference threshold."
+#| fig-height: 9
+#| fig-width: 12
+
+COL_STRESS_FILL <- "#FDEDEC"
+COL_STRESS_LINE <- "#C0392B"
+COL_ACCENT      <- "#2C3E50"
+
+cpp <- bedroom_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(year == 2025, bedroom_type %in% c("2 bedroom", "3 bedroom")) %>%
+  mutate(
+    n_sharers    = as.numeric(sub(" bedroom", "", bedroom_type)),
+    cost_pp      = round(`median ($)` / n_sharers, 0),
+    region_short = recode(region,
+                          "Eastern Adelaide"    = "Eastern",   "Western Adelaide"    = "Western",
+                          "Northern Adelaide"   = "Northern",  "Southern Adelaide"   = "Southern",
+                          "Eyre and Western"    = "Eyre & West","Fleurieu and KI"    = "Fleurieu",
+                          "Yorke and Mid North" = "Yorke",     "Murray and Mallee"   = "Murray",
+                          "Limestone Coast"     = "Limestone", "Far North"           = "Far North",
+                          "Adelaide Hills"      = "Hills",     "Barossa"             = "Barossa"),
+    bedroom_label = factor(
+      recode(bedroom_type, "2 bedroom" = "2-Bedroom  (2 sharing)",
+             "3 bedroom" = "3-Bedroom  (3 sharing)"),
+      levels = c("2-Bedroom  (2 sharing)","3-Bedroom  (3 sharing)")
+    ),
+    dwelling_type = factor(dwelling_type, levels = c("Flat","House"))
+  )
+
+label_data <- cpp %>%
+  select(region_short, bedroom_label, area_group, dwelling_type, cost_pp) %>%
+  pivot_wider(names_from = dwelling_type, values_from = cost_pp) %>%
+  mutate(gap = House - Flat, flat_is_left = gap >= 0, close = abs(gap) < 15)
+
+cpp <- cpp %>%
+  left_join(label_data %>% select(region_short, bedroom_label, area_group, flat_is_left, close),
+            by = c("region_short","bedroom_label","area_group")) %>%
+  mutate(
+    label_hjust = case_when(
+      dwelling_type == "Flat"  &  flat_is_left & !close ~  1.65,
+      dwelling_type == "Flat"  &  flat_is_left &  close ~  2.20,
+      dwelling_type == "Flat"  & !flat_is_left & !close ~ -0.65,
+      dwelling_type == "Flat"  & !flat_is_left &  close ~ -1.20,
+      dwelling_type == "House" &  flat_is_left & !close ~ -0.65,
+      dwelling_type == "House" &  flat_is_left &  close ~ -1.20,
+      dwelling_type == "House" & !flat_is_left & !close ~  1.65,
+      dwelling_type == "House" & !flat_is_left &  close ~  2.20,
+      TRUE ~ 0
+    )
+  )
+
+make_cpp_panel <- function(data, show_x_axis = FALSE) {
+  region_order <- data %>%
+    filter(dwelling_type == "Flat", bedroom_type == "2 bedroom") %>%
+    arrange(cost_pp) %>% pull(region_short) %>% unique()
+  data <- data %>% mutate(region_short = factor(region_short, levels = region_order))
+  seg <- data %>%
+    select(region_short, bedroom_label, dwelling_type, cost_pp) %>%
+    pivot_wider(names_from = dwelling_type, values_from = cost_pp) %>%
+    rename(x_flat = Flat, x_house = House) %>%
+    mutate(x_left = pmin(x_flat, x_house), x_right = pmax(x_flat, x_house))
+  flat_d  <- data %>% filter(dwelling_type == "Flat")
+  house_d <- data %>% filter(dwelling_type == "House")
+  ggplot(data, aes(x = cost_pp, y = region_short)) +
+    annotate("rect", xmin = threshold, xmax = 445, ymin = -Inf, ymax = Inf,
+             fill = COL_STRESS_FILL, alpha = 1) +
+    geom_vline(xintercept = threshold, linetype = "dashed",
+               color = COL_STRESS_LINE, linewidth = 0.6, alpha = 0.7) +
+    annotate("text", x = threshold + 3, y = 0.52,
+             label = paste0("$", threshold, " stress\nthreshold"),
+             hjust = 0, vjust = 0, size = 2.6,
+             color = COL_STRESS_LINE, fontface = "italic", lineheight = 0.9) +
+    geom_segment(data = seg,
+                 aes(x = x_left, xend = x_right, y = region_short, yend = region_short),
+                 color = "gray72", linewidth = 1.2, lineend = "round", inherit.aes = FALSE) +
+    geom_point(data = flat_d, aes(x = cost_pp, y = region_short),
+               shape = 21, size = 6, fill = COL_FLAT_FILL, color = COL_FLAT, stroke = 1.6) +
+    geom_point(data = house_d, aes(x = cost_pp, y = region_short),
+               shape = 21, size = 6, fill = COL_HOUSE_FILL, color = COL_HOUSE, stroke = 1.6) +
+    geom_text(data = flat_d,
+              aes(x = cost_pp, y = region_short, label = paste0("$", cost_pp), hjust = label_hjust),
+              size = 2.9, color = COL_FLAT, fontface = "bold") +
+    geom_text(data = house_d,
+              aes(x = cost_pp, y = region_short, label = paste0("$", cost_pp), hjust = label_hjust),
+              size = 2.9, color = COL_HOUSE, fontface = "bold") +
+    facet_wrap(~ bedroom_label, nrow = 1) +
+    scale_x_continuous(breaks = seq(50, 400, by = 50), limits = c(50, 445),
+                       labels = dollar_format(prefix = "$"),
+                       expand = expansion(mult = c(0.01, 0.03))) +
+    scale_y_discrete(expand = expansion(add = 0.75)) +
+    labs(x = if (show_x_axis) "Weekly rent per person ($)" else NULL, y = NULL) +
+    theme_sa(flip = TRUE) +
+    theme(panel.border    = element_rect(fill = NA, color = "gray88", linewidth = 0.4),
+          panel.spacing.x = unit(1.8, "lines"),
+          plot.margin     = margin(2, 10, 4, 10),
+          legend.position = "none")
+}
+
+make_divider <- function(label) {
+  ggplot() +
+    annotate("segment", x=0, xend=1, y=0.5, yend=0.5, color="gray80", linewidth=0.6) +
+    annotate("rect", xmin=0, xmax=0.008, ymin=0.05, ymax=0.95, fill=COL_ACCENT, color=NA) +
+    annotate("rect", xmin=0.010, xmax=0.30, ymin=0.05, ymax=0.95, fill=COL_BG, color=NA) +
+    annotate("text", x=0.018, y=0.52, label=label,
+             hjust=0, vjust=0.5, size=4.0, fontface="bold", color=COL_ACCENT) +
+    xlim(0,1) + ylim(0,1) +
+    theme_void() +
+    theme(plot.background = element_rect(fill=COL_BG, color=NA), plot.margin=margin(6,10,2,10))
+}
+
+legend_cpp <- ggplot() +
+  annotate("point", x=0.28, y=0.5, shape=21, size=5,
+           fill=COL_FLAT_FILL, color=COL_FLAT, stroke=1.5) +
+  annotate("text",  x=0.315, y=0.5, label="Flat  (label left of dot)",
+           hjust=0, size=3.6, color=COL_FLAT, fontface="bold") +
+  annotate("point", x=0.57, y=0.5, shape=21, size=5,
+           fill=COL_HOUSE_FILL, color=COL_HOUSE, stroke=1.5) +
+  annotate("text",  x=0.605, y=0.5, label="House  (label right of dot)",
+           hjust=0, size=3.6, color=COL_HOUSE, fontface="bold") +
+  xlim(0,1) + ylim(0,1) +
+  theme_void() +
+  theme(plot.background=element_rect(fill=COL_BG,color=NA), plot.margin=margin(2,10,2,10))
+
+p_metro_cpp <- make_cpp_panel(cpp %>% filter(area_group == "Metro"),       show_x_axis = FALSE)
+p_ros_cpp   <- make_cpp_panel(cpp %>% filter(area_group == "Rest of State"), show_x_axis = TRUE)
+
+(legend_cpp / make_divider("Metro Adelaide") / p_metro_cpp /
+   make_divider("Rest of State") / p_ros_cpp) +
+  plot_layout(heights = c(0.045, 0.027, 0.335, 0.027, 0.566)) +
+  plot_annotation(
+    title    = "Weekly Rent Per Person When Sharing — South Australia (2025)",
+    subtitle = paste0("Sharing helps, but many Metro areas still breach the $", threshold,
+                      " weekly stress threshold even when splitting the cost with a housemate"),
+    caption  = "Source: SA Government Private Rent Report · SA Government Data Directory",
+    theme    = theme(
+      plot.title      = element_text(face="bold", size=SZ_TITLE, color="#1A252F",
+                                     hjust=0, margin=margin(b=4)),
+      plot.subtitle   = element_text(size=SZ_SUBTITLE, color="gray45",
+                                     hjust=0, margin=margin(b=8)),
+      plot.caption    = element_text(size=SZ_CAPTION, color="gray55",
+                                     hjust=1, margin=margin(t=6)),
+      plot.background = element_rect(fill=COL_BG, color=NA),
+      plot.margin     = margin(14,16,10,16)
+    )
+  )
+```
+The dashed line marks **\$240 per week** — the 30% stress threshold. Everything to its left is affordable. Sharing changes that.
+
+Two students splitting a 2-bedroom flat in Northern Adelaide each pay **\$240** — right on the line. Three students sharing a 3-bedroom flat in the same zone each pay just **\$167**, or 21% of income — comfortable and manageable. The same pattern holds across the other zones of SA.
+
+The Adelaide rental market in 2025 is simply not built for single student incomes. Two or three students splitting a property transforms an unaffordable market into a workable one, in almost every region and at almost every price point.
+
+
+## Chapter 8 — Interactivity: What If the Income Is Different?
+
+Throughout this guide, a student income of **\$800 per week** has been the assumed baseline. But not every student arrives in the same financial situation.
+
+A student whose spouse has full work rights brings a combined household income that changes the calculation entirely. That question cannot be answered by a static chart. It needs an interactive tool.
+
+---
+
+### Explore the Calculator
+
+An interactive affordability calculator has been built to answer exactly these questions. It can be accessed here:
+
+🔗 **[SA Rental Affordability Calculator](https://drsoso.shinyapps.io/my_shiny_app/)**
+
+The calculator has three sections:
+
+**Affordability Calculator** — Drag the income slider, filter by dwelling type, and select an area group to watch every SA region update in real time.
+
+**Sharing Calculator** — Select a bedroom size, drag the income slider, filter by dwelling type, and select an area group to see what each person pays when a property is shared.
+
+**Rent Trend Explorer** — Select any SA region, drag the income slider, and filter by dwelling type to see how median rents for flats and houses have moved year by year.
+
+
+## Conclusion — Welcome to Adelaide
+
+::: {.callout-tip}
+## The Data Verdict: Five Things to Know Before You Arrive
+
+1. **Rent has risen every year since 2020 — and will likely keep rising.** Budget for 6–10% annual increases.
+
+2. **You cannot rent alone in Metro Adelaide on an \$800/week student income or less without financial stress.** Every metro region exceeds the 30% threshold for solo renters.
+
+3. **The strategy that works: Share a 3-bedroom flat or house with two other students.** This is the most cost-efficient structure in the entire dataset — bringing per-person costs down to \$167–\$232/week in metro.
+
+4. **Northern Adelaide is the budget zone for metro living.** The most affordable rents in the city, a large student community, and a direct train line to the CBD.
+
+5. **Choose a flat over a house wherever possible.** The flat-to-house price gap is high and growing — especially in regional SA.
+:::
+
+Adelaide has a large, welcoming international student community. Its public transport network, unlike that of many Australian regional cities, makes it genuinely possible to live affordably.
+
+To every student who has just received an acceptance letter and opened a real estate app for the first time — this guide was written for you. Welcome to Adelaide.
+
+---
+
+## References
+
+Government of South Australia (2025). *Private Rent Report*. SA Government Data Directory. <https://data.sa.gov.au/data/dataset/private-rent-report>
+
+Australian Bureau of Statistics (2025). *Total value of dwellings, December quarter 2024*. <https://abs.gov.au/statistics/economy/price-indexes-and-inflation/total-value-dwellings/dec-quarter-2024>
+
+CoreLogic (2024). *Housing Market Trends Report*. <https://www.corelogic.com.au>
+
+Australian Housing and Urban Research Institute (AHURI) (2023). *Understanding rental affordability in Australia*. <https://www.ahuri.edu.au>

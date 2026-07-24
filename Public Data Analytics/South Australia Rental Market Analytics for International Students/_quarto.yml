@@ -1,0 +1,20 @@
+project:
+  type: default
+  execute-dir: project
+
+title: "South Australia Rental Market Analytics for International Students"
+subtitle: "Rental Affordability, Geographic Differences and Housing-Type Trends"
+author: "Md Soad Solaiman"
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-title: "Contents"
+    toc-depth: 2
+    number-sections: false
+    code-fold: true
+    code-summary: "Show R code"
+    embed-resources: true
+    fig-responsive: true
