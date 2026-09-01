@@ -1,7 +1,6 @@
 ---
-title: "South Australia Rental Market Analytics for International Students"
-subtitle: "Rental Affordability, Geographic Differences and Housing-Type Trends"
-description: "Public-data analysis of rental affordability, geographic differences and housing-type trends for international students in South Australia."
+title: "Finding Home in South Australia"
+subtitle: "A Data-Driven Rental Guide for International Students Coming to South Australia"
 author: "Md Soad Solaiman"
 date: today
 format:
@@ -13,6 +12,7 @@ format:
     toc-expand: 2
     number-sections: false
     theme: cosmo
+    css: styles.css
     fontsize: 1.05em
     linestretch: 1.9
     fig-align: center
@@ -115,20 +115,13 @@ scale_color_dwelling <- function(...) {
 }
 ```
 
----
-
-::: {.callout-note appearance="simple"}
-**Data:** SA Government Private Rent Report (2020–2025)
-:::
-
----
 
 ## The Letter That Started Everything
 
-It arrived on a Tuesday morning in December 2024. I read it once, then again, then a third time to be sure. It read:
+It arrived on a Tuesday morning, December 2024. I read it once, then again, then a third time to be sure. It says, 
 
 ::: {.letter-card}
-<div class="letter-from">FROM · UNIVERSITY ADMISSIONS OFFICE</div>
+<div class="letter-from">FROM · THE UNIVERSITY OF ADELAIDE · OFFICE OF ADMISSIONS</div>
 <div class="letter-stamp">🎓</div>
 
 <div class="letter-greeting">Congratulations, <span>Soad.</span></div>
@@ -140,29 +133,28 @@ We are delighted to inform you that your application for the Master of Data Scie
 <div class="letter-sig">Warm regards,<br>The Admissions Office</div>
 :::
 
-The next few hours were a blur of phone calls and celebration. But by the next morning, a quieter, more practical question had settled in — one that every international student eventually faces.
+The next few hours were a blur of phone calls and celebration. But by the next morning, a quieter, more practical question comes to my mind. One that every international student eventually faces.
 
 **Where am I going to live?**
 
-I opened a real estate website, and the numbers left me with more questions than answers. Which suburb? What's the difference between a flat and a house? Is \$580 a week normal? Am I being overcharged? Is there something cheaper? Can I even afford this on a student income?
+I opened a real estate website. The numbers just confused me. Which suburb? What's a flat versus a house? Is $580 a week normal? Am I being ripped off? Is there something cheaper? Can I even afford this on a student income?
 
 This is not just my story. It is the story of every international student who arrives in Adelaide holding an acceptance letter and a suitcase, with no real sense of the rental landscape they are about to enter.
 
-So I did what any data science student should do: I gathered six years of South Australian rental records from the SA Government Data Directory and built this guide for future students — a rental story of South Australia.
+So I am intending to do what any data science student should do. I found the data — six years of South Australian rental records from the SA Government Data Directory and I built this guide for the future students..A rental story of SA. 
 
 ::: {.callout-tip}
 ## About this guide
-All rent figures are **median weekly rent in AUD**. A student income of **\$800/week** is assumed throughout, based on the 24-hour/week work limit under a student visa at approximately **\$35/hour** after tax for the standard analysis. An interactive affordability calculator is also available in Chapter 8.
+All rent figures are **median weekly rent in AUD**. A student income of **\$800/week** is assumed throughout, based on the 24-hour/week work limit under a student visa at approximately **\$35/hour** after tax for standrd analysis. Also an interactive affordability calculator is available in chapter 10.
 :::
 
 ## Chapter 1 — Yes, It Is Going Up. Every Year.
 
-Before asking *where* or *what type*, a student needs to understand the market's basic direction. The answer is direct: rents in South Australia have increased every year.
+Before asking *where* or *what type*, a student needs to understand the market's basic direction. The answer is direct: Rents in South Australia is increasing every year..
 
 ```{r}
 #| label: fig-g1
 #| fig-cap: "Median weekly rent across all of South Australia. Labels show the year-on-year growth rate. Source: SA Government Private Rent Report."
-#| fig-alt: "Column chart of statewide median weekly rent for selected Q4 observations from 2020 to 2025, with dollar values and year-on-year percentage changes labelled above the columns."
 #| fig-height: 5
 #| fig-width: 9
 
@@ -209,14 +201,13 @@ But there is some comfort in what has happened since. Growth has been slowing fr
 
 ## Chapter 2 — Metro vs The Rest of SA
 
-Adelaide feels immediately welcoming on arrival — compact, walkable, and easy to navigate. The rental market, however, is not nearly as unified. It is effectively two very different markets, and which one a student enters will shape their financial experience for the duration of their studies.
+When you land in Adelaide for the first time, the city feels just awesome. It is compact, walkable, and amazingly easy to navigate. But the rental market is not like that. It is two very different worlds, and which world a student enters will shape their entire financial experience for a sudden period of time.
 
-The first is **Metro Adelaide** — the greater city, the suburbs, the university campuses, the cafés, and the train lines. The second is the **Rest of State** — regional towns, coastal communities, farming country, and open space. For students, the relevant market depends largely on the location of their campus.
+The first world is **Metro Adelaide** — the greater city, the suburbs, the university campuses, the coffee shops and the train lines. The second is the **Rest of State** — regional towns, coastal communities, farming country and wide open space. But for students it genuinely depends on the location of the campus.
 
 ```{r}
 #| label: fig-g2
 #| fig-cap: "Metro Adelaide has consistently higher rents. Regional SA is cheaper but the gap has been narrowing. Source: SA Government Private Rent Report."
-#| fig-alt: "Grouped column chart comparing Metro Adelaide and Rest of State median weekly rent for selected Q4 observations from 2020 to 2025, with values and annual percentage changes labelled."
 #| fig-height: 5
 #| fig-width: 9
 
@@ -266,20 +257,111 @@ ggplot(metro_rest_trend, aes(x = factor(year), y = `median ($)`, fill = area_gro
 ```
 
 
-Both markets moved together through the post-COVID years, rising steadily through 2021 and 2022. Then 2023 arrived: Metro rents surged to **\$500**, a **+16.3% jump**, while Regional SA rose **+15.2%** — indicating the shock hit everywhere at once.
+Both markets moved together through the post-COVID years, rising steadily through 2021 and 2022. Then 2023 arrived. Metro rents surged to **\$500**, a **+16.3% jump** and Regional SA  **+15.2% jump**. It means the shock hit everywhere at once.
 
-What happened next is where the trend becomes more interesting. From 2024 onwards, Metro began to cool, with growth slowing to **+10%** in 2024 and just **+5.5%** by 2025. Regional growth, however, stayed stubbornly high — **+7.9%** in 2024 and **+9.8%** in 2025 — meaning the regions were now rising faster than the city itself.
+What happened next is where the story gets interesting. From 2024 onwards, Metro began to cool. Growth slowed to **+10%** in 2024 and just **+5.5%** by 2025. But in regional, growth stayed stubbornly high at **+7.9%** in 2024 and **+9.8%** in 2025. The regions were now rising faster than the city itself.
 
-The pattern is clear: Metro is expensive but stabilizing, while Regional SA is cheaper but accelerating.
+The message is clear. Metro is expensive but stabilizing. Regional SA is cheaper but accelerating.
 
-## Chapter 3 — Flat or House?
 
-Every student arriving in Adelaide faces the same early question, and the answer largely comes down to rent.
+## Chapter 3 — The Burden That Compounds
+
+Imagine arriving in Metro Adelaide in 2020 as a new student. A flat costs **\$320 per week**. A house costs **\$405**. Tight, but manageable. The lease is signed. Life begins.
+```{r}
+#| label: fig-g3
+#| fig-cap: "Each block shows the dollar increase added in that year, stacked on the 2020 base. The burden compounds. Source: SA Government Private Rent Report."
+#| fig-height: 6
+#| fig-width: 10
+
+waterfall_raw <- time_series_tidy %>%
+  mutate(year = as.numeric(year), value = as.numeric(value)) %>%
+  filter(measure %in% c("Flat Median", "House Median"),
+         area_group %in% c("Metro", "Rest of State")) %>%
+  mutate(
+    dwelling_type = recode(measure, "Flat Median" = "Flat", "House Median" = "House"),
+    area_group    = factor(area_group, levels = c("Metro", "Rest of State"))
+  ) %>%
+  group_by(year, area_group, dwelling_type) %>%
+  summarise(rent = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  arrange(area_group, dwelling_type, year)
+
+waterfall_data <- waterfall_raw %>%
+  group_by(area_group, dwelling_type) %>%
+  mutate(
+    base2020  = first(rent),
+    yoy_delta = rent - lag(rent),
+    yoy_delta = ifelse(is.na(yoy_delta), 0, yoy_delta),
+    cumul     = cumsum(yoy_delta),
+    bar_start = base2020 + lag(cumul, default = 0),
+    bar_end   = base2020 + cumul,
+    pct_label = ifelse(yoy_delta == 0, "Base", paste0("+$", round(yoy_delta, 0)))
+  ) %>%
+  ungroup()
+
+base_bars    <- waterfall_data %>% filter(year == 2020) %>% mutate(bar_start = 0, bar_end = base2020)
+incr_bars    <- waterfall_data %>% filter(year > 2020)
+total_labels <- waterfall_data %>% mutate(total_label = paste0("$", round(bar_end, 0)))
+
+ggplot() +
+  geom_rect(data = base_bars,
+            aes(xmin = year - 0.32, xmax = year + 0.32,
+                ymin = bar_start, ymax = bar_end, fill = dwelling_type), alpha = 0.30) +
+  geom_rect(data = incr_bars,
+            aes(xmin = year - 0.32, xmax = year + 0.32,
+                ymin = bar_start, ymax = bar_end, fill = dwelling_type), alpha = 0.88) +
+  geom_segment(data = incr_bars,
+               aes(x = year - 0.32, xend = year - 1 + 0.32,
+                   y = bar_start, yend = bar_start, color = dwelling_type),
+               linetype = "dotted", linewidth = 0.5) +
+  geom_text(data = incr_bars %>% filter(yoy_delta > 0),
+            aes(x = year, y = bar_start + yoy_delta / 2,
+                label = pct_label, color = dwelling_type),
+            size = 2.6, fontface = "bold") +
+  geom_text(data = total_labels,
+            aes(x = year, y = bar_end, label = total_label, color = dwelling_type),
+            vjust = -0.5, size = 2.7, fontface = "bold") +
+  geom_text(data = base_bars,
+            aes(x = year, y = base2020 / 2,
+                label = paste0("Base\n$", round(base2020, 0)), color = dwelling_type),
+            size = 2.5, fontface = "bold", lineheight = 0.85) +
+  facet_wrap(~ area_group, ncol = 2) +
+  scale_fill_dwelling() +
+  scale_color_dwelling() +
+  scale_x_continuous(breaks = 2020:2025, expand = expansion(mult = c(0.05, 0.05))) +
+  scale_y_continuous(breaks = seq(0, 700, by = 100), limits = c(0, 760),
+                     labels = dollar_format(prefix = "$"),
+                     expand = expansion(mult = c(0, 0.04))) +
+  labs(
+    title    = "Cumulative Rent Growth from 2020 Baseline — Flat vs House",
+    subtitle = "Each block shows the dollar increase added each year on top of the 2020 base — the burden compounds over time",
+    caption  = "Source: SA Government Private Rent Report",
+    x = NULL, y = "Median weekly rent ($)", fill = NULL, color = NULL
+  ) +
+  theme_sa(flip = FALSE) +
+  theme(panel.spacing = unit(2.5, "lines"),
+        panel.border  = element_rect(fill = NA, color = "gray82", linewidth = 0.5),
+        legend.position = "top") +
+  guides(fill = guide_legend(override.aes = list(alpha = 0.88)), color = "none")
+```
+
+Without any warning, the flat that cost **\$320** in 2020 now demands **\$55 more** in a single renewal. Houses jump by **\$61** in the same year. For a student already stretched thin — balancing study, part-time work, and the general cost of living in a foreign country, this is just unbearable.
+
+
+This is what the chart is really showing. Not just growth, but accumulation. Every year's increase does not replace the last one. It sits on top of it. The 2021 increase is still there in 2025. So is 2022. So is the shock of 2023. They do not disappear. They compound. And every student who arrives in Adelaide inherits all of them.
+
+::: {.callout-warning}
+## The Burden That Compounds
+A student arriving in 2022 starts from **\$370** and now paying **\$495** for a metro flat.
+:::
+
+
+## Chapter 4 — Flat or House?
+
+Every student arriving in Adelaide faces the same early question. The answer is straightforward, depends on rent.
 
 ```{r}
 #| label: fig-combined1
 #| fig-cap: "Left panels: flat and house rents by year. Right panels: the dollar gap between house and flat rents. The gap in regional SA has grown dramatically. Source: SA Government Private Rent Report."
-#| fig-alt: "Four-panel comparison of flat and house median weekly rents and the house-minus-flat rent gap for Metro Adelaide and Rest of State from 2020 to 2025."
 #| fig-height: 8
 #| fig-width: 11
 
@@ -361,21 +443,20 @@ ros_gap   <- make_gap(gap_data %>% filter(area_group == "Rest of State"),
   )
 ```
 
-In 2020, the difference between renting a flat and a house was relatively small across South Australia, and for many renters the choice was still driven by lifestyle rather than cost.
+In 2020, when the difference between renting a flat and a house was relatively small across South Australia. For many renters, the choice was still driven by lifestyle rather than cost.
 
-As the years passed, houses began pulling away. In Metro Adelaide, the gap widened quickly, reaching its peak in 2023. By 2025, the gap had narrowed to approximately **\$100** and continues to trend downward.
+As the years passed, houses began pulling away. In Metro Adelaide, the gap widened quickly, reaching its peak in2023. By 2025, the difference remained significant but **\$100**. Fortunately, it has a decreasing trend.
 
-Regional South Australia followed a different path. There, the gap expanded year after year without interruption, with houses moving further ahead while flat rents rose more slowly. By 2025, the separation between the two dwelling types had reached approximately **\$170** and continues to trend upward.
+Regional South Australia followed a different path. There, the gap expanded year after year without interruption. Houses continued moving further ahead while flat's rent rose more slowly. By 2025, the separation between the two dwelling types had become larger than ever before which is **\$170** and it has a increasing trend.
 
 
-## Chapter 4 — The Map of Metro Adelaide: Four Zones, Four Price Points
+## Chapter 5 — The Map of Metro Adelaide: Four Zones, Four Price Points
 
-Once a student has decided to rent in Metro Adelaide, the next question is where. Metro Adelaide divides into four broad geographic rental zones, and they have meaningfully different price levels.
+Once you know you will be renting in metro Adelaide, the next question is where. The Metro divides into four broad geographic rental zones — and they have meaningfully different price levels.
 
 ```{r}
 #| label: fig-map
 #| fig-cap: "Metro Adelaide divided into four rental zones. Bubble size proportional to median rent (2020–2025). Growth since 2020 shown for each zone. Source: SA Government Private Rent Report. Region boundaries are approximate."
-#| fig-alt: "Approximate map of four Metro Adelaide rental zones with labelled median rent summaries, percentage changes and an inset map showing South Australian regional observations."
 #| fig-height: 8
 #| fig-width: 9
 
@@ -563,14 +644,75 @@ p_main + inset_element(p_inset, left=0.00, bottom=0.72, right=0.28, top=1.00)
 ```
 
 
-## Chapter 5 — The 2025 Snapshot: What Does It Actually Cost?
 
-The previous chapters have described how rents got to where they are today. This chart answers the practical question that follows: what did a property actually cost in the most recent year, depending on its location and number of bedrooms?
+
+## Chapter 6 — The SA Region-wise Picture
+
+Before we move to the affordability analysis, the boxplot below completes the picture. It shows the entire rent distribution across all regions and both dwelling types across all six years of data.
+
+```{r}
+#| label: fig-boxplot
+#| fig-cap: "Notched boxplots show the full rent distribution (2020–2025). The notch represents the 95% confidence interval around the median. Houses cost more than flats in every region without exception. Source: SA Government Private Rent Report."
+#| fig-height: 6
+#| fig-width: 11
+
+dist_data <- bedroom_tidy %>%
+  mutate(year = as.numeric(year), `median ($)` = as.numeric(`median ($)`)) %>%
+  filter(
+    region %in% c("Eastern Adelaide","Western Adelaide","Northern Adelaide",
+                  "Southern Adelaide","Adelaide Hills","Barossa",
+                  "Eyre and Western","Fleurieu and KI"),
+    dwelling_type %in% c("Flat", "House")
+  ) %>%
+  mutate(
+    region = recode(region,
+                    "Eastern Adelaide"  = "Eastern",  "Western Adelaide"  = "Western",
+                    "Northern Adelaide" = "Northern", "Southern Adelaide" = "Southern",
+                    "Eyre and Western"  = "Eyre",     "Fleurieu and KI"   = "Fleurieu"),
+    area_group    = factor(area_group,    levels = c("Metro", "Rest of State")),
+    dwelling_type = factor(dwelling_type, levels = c("Flat", "House"))
+  )
+
+region_order <- dist_data %>%
+  group_by(region) %>% summarise(med = median(`median ($)`)) %>%
+  arrange(desc(med)) %>% pull(region)
+dist_data <- dist_data %>% mutate(region = factor(region, levels = region_order))
+
+ggplot(dist_data, aes(x = region, y = `median ($)`, fill = dwelling_type)) +
+  geom_jitter(aes(color = dwelling_type),
+              position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.75),
+              size = 1.2, alpha = 0.35, show.legend = FALSE) +
+  geom_boxplot(notch = TRUE, notchwidth = 0.5,
+               position = position_dodge(width = 0.75),
+               width = 0.55, alpha = 0.80, outlier.shape = NA) +
+  facet_wrap(~ area_group, scales = "free_x", nrow = 1) +
+  scale_fill_dwelling() +
+  scale_color_dwelling() +
+  scale_y_continuous(breaks = seq(0, 900, by = 100), limits = c(0, 950),
+                     labels = dollar_format(prefix = "$"),
+                     expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title    = "Rent Distribution by Region and Dwelling Type (2020–2025)",
+    subtitle = "Houses cost more than flats in every region across all years — the pattern is consistent and clear",
+    caption  = "Source: SA Government Private Rent Report",
+    x = NULL, y = "Median weekly rent ($)", fill = NULL
+  ) +
+  theme_sa(flip = FALSE) +
+  theme(panel.border   = element_rect(fill = NA, color = "gray80", linewidth = 0.5),
+        panel.spacing  = unit(2, "lines"))
+```
+
+A notable observation: **Adelaide Hills** and **Barossa** in the Rest of State are priced comparably to, and sometimes, above Northern Metro. Their scenic character and proximity to Adelaide drive a lifestyle premium. Students considering regional SA for affordability reasons should check these regions carefully before assuming they are cheap.
+
+---
+
+## Chapter 7 — The 2025 Snapshot: What Does It Actually Cost?
+
+All the previous chapters have told the story of how rents got to where they are today. This chart answers the practical question that follows: what does a property actually costs last year, depending on where it is and how many bedrooms it has?
 
 ```{r}
 #| label: fig-bedroom
 #| fig-cap: "Exact 2025 median weekly rent by region, bedroom type and dwelling type. Flat in blue, House in red. Source: SA Government Private Rent Report."
-#| fig-alt: "Faceted column charts comparing 2025 median weekly rent for two- and three-bedroom flats and houses across selected Metro Adelaide and Rest of State regions."
 #| fig-height: 8
 #| fig-width: 12
 
@@ -639,7 +781,7 @@ metro_chart / ros_chart +
   )
 ```
 
-Key comparisons to note from this chart:
+Key comparisons a student should take from this chart:
 
 ```{r}
 #| label: tbl-regions
@@ -664,16 +806,17 @@ tibble(
 ---
 
 
-## Chapter 6 — The Real Question: Can It Be Afforded on \$800 a Week?
 
-The previous chapters have described the market. This one measures it against a student's actual income. A student on a visa, working the maximum allowed 24 hours per week at approximately \$35 per hour, earns around **\$800 per week**. That is the budget — now comes the hard part.
+
+## Chapter 8 — The Real Question: Can It Be Afforded on \$800 a Week?
+
+All the previous chapters have described the market. This one measures it against a student's actual income. A student on a visa working the maximum allowed hours, 24 per week at approximately \$35 per hour, earns around **\$800 per week**. That is the budget. Now comes the hard part.
 
 Housing experts define **stress** as spending more than **30% of income on rent**. Beyond **50%** is considered **severe**. Both lines are marked on the chart.
 
 ```{r}
 #| label: fig-afford
 #| fig-cap: "Rent as a percentage of weekly student income ($800) across all SA regions in 2025. The 30% stress and 50% severe stress thresholds are shown. Source: SA Government Private Rent Report."
-#| fig-alt: "Horizontal grouped columns showing 2025 flat and house median rent as a percentage of an assumed 800 dollar weekly income across Metro Adelaide and Rest of State regions, with 30 and 50 percent reference lines."
 #| fig-height: 7
 #| fig-width: 11
 
@@ -729,18 +872,18 @@ ggplot(affordability, aes(x = rent_pct, y = region_short, fill = dwelling_type))
 
 ::: {.callout-warning}
 ## Renting alone is not viable
-On \$800 per week, renting alone — in any type of house or flat — is not financially viable.
+On \$800 per week, renting alone any type of house or flat renting alone isn't viable.
 :::
 
 
-## Chapter 7 — The Solution: Sharing
 
-The previous chapter ended on an uncomfortable finding: renting alone does not work on a student income. But the data does not leave things there — it also shows exactly what does work.
+## Chapter 9 — The Solution: Sharing
+
+The previous chapter ended with an uncomfortable situation. Renting alone does not work on a student income. But the data does not leave things there. It also shows exactly what does work.
 
 ```{r}
 #| label: fig-cpp
 #| fig-cap: "Weekly rent per person when sharing (2-bedroom = 2 sharing, 3-bedroom = 3 sharing). Red shaded zone indicates above the $240 stress threshold. Source: SA Government Private Rent Report."
-#| fig-alt: "Dot-and-line comparison of weekly rent per person for two people sharing a two-bedroom property and three people sharing a three-bedroom property across South Australian regions, with a 240 dollar reference threshold."
 #| fig-height: 9
 #| fig-width: 12
 
@@ -888,12 +1031,14 @@ p_ros_cpp   <- make_cpp_panel(cpp %>% filter(area_group == "Rest of State"), sho
 ```
 The dashed line marks **\$240 per week** — the 30% stress threshold. Everything to its left is affordable. Sharing changes that.
 
-Two students splitting a 2-bedroom flat in Northern Adelaide each pay **\$240** — right on the line. Three students sharing a 3-bedroom flat in the same zone each pay just **\$167**, or 21% of income — comfortable and manageable. The same pattern holds across the other zones of SA.
+Two students splitting a 2-bedroom flat in Northern Adelaide each pay **\$240** — right on the line. Three students sharing a 3-bedroom flat in the same zone each pay just **\$167**. That is 21% of income. Comfortable. Manageable.The same picture is for the other zones of SA as well.
 
-The Adelaide rental market in 2025 is simply not built for single student incomes. Two or three students splitting a property transforms an unaffordable market into a workable one, in almost every region and at almost every price point.
+The situation is like the Adelaide rental market in 2025 is not built for single student incomes. Two or three students splitting a property transforms an unaffordable market into a workable one in almost every region, at almost every price point.
 
 
-## Chapter 8 — Interactivity: What If the Income Is Different?
+
+
+## Chapter 10 — Interactivity: What If the Income Is Different?
 
 Throughout this guide, a student income of **\$800 per week** has been the assumed baseline. But not every student arrives in the same financial situation.
 
@@ -909,11 +1054,12 @@ An interactive affordability calculator has been built to answer exactly these q
 
 The calculator has three sections:
 
-**Affordability Calculator** — Drag the income slider, filter by dwelling type, and select an area group to watch every SA region update in real time.
+**Affordability Calculator** — Drag the income slider, filter dwelling type and select area group and watch every SA region update in real time. 
 
-**Sharing Calculator** — Select a bedroom size, drag the income slider, filter by dwelling type, and select an area group to see what each person pays when a property is shared.
+**Sharing Calculator** — Select a bedroom size, drag the income slider, filter dwelling type and select area group and see what each person pays when the property is sharing.
 
-**Rent Trend Explorer** — Select any SA region, drag the income slider, and filter by dwelling type to see how median rents for flats and houses have moved year by year.
+**Rent Trend Explorer** — Select any SA region, drag the income slider, filter dwelling type and see how median rents for flats and houses have moved year by year.
+
 
 
 ## Conclusion — Welcome to Adelaide
@@ -932,9 +1078,9 @@ The calculator has three sections:
 5. **Choose a flat over a house wherever possible.** The flat-to-house price gap is high and growing — especially in regional SA.
 :::
 
-Adelaide has a large, welcoming international student community. Its public transport network, unlike that of many Australian regional cities, makes it genuinely possible to live affordably.
+Adelaide has a large, welcoming international student community. Its public transport network, unlike many Australian regional cities, makes it genuinely possible to live affordably. 
 
-To every student who has just received an acceptance letter and opened a real estate app for the first time — this guide was written for you. Welcome to Adelaide.
+To every student who just received their acceptance letter and opened a real estate app for the first time, this guide was written for you.Again,  Welcome to Adelaide.
 
 ---
 
