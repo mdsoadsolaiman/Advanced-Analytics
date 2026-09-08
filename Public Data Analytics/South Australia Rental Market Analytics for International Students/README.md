@@ -6,7 +6,7 @@ Rental Affordability, Geographic Differences and Housing-Type Trends
 
 This public-data analytics project examines South Australian rental patterns from 2020 to 2025. It combines a reproducible R workflow, a Quarto report and an interactive Shiny application to present changes in median weekly rent across geographic areas, dwelling types and bedroom categories.
 
-The project is designed primarily for international students comparing rental locations, housing options and affordability scenarios in South Australia.
+The project is designed primarily for international students comparing rental locations, housing options and affordability scenarios in South Australia. Click the here to see the project: https://sa-rental-market.netlify.app 
 
 Project resources:
 
