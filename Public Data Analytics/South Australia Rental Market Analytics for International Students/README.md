@@ -10,7 +10,7 @@ The project is designed primarily for international students comparing rental lo
 
 Project resources:
 
-- [Rendered analytics report](analysis/rental-market-analysis.html)
+- [Rendered analytics report](https://sa-rental-market.netlify.app)
 - [Quarto report source](analysis/rental-market-analysis.qmd)
 - [Interactive Shiny application](https://drsoso.shinyapps.io/my_shiny_app/)
 - [Data dictionary](docs/data-dictionary.md)
