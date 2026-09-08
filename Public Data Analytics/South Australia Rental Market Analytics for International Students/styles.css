@@ -64,6 +64,7 @@ nav[role="doc-toc"] a {
   color: var(--ink-soft) !important;
   line-height: 1.65 !important;
   font-weight: 500 !important;
+  text-decoration: none !important;
 }
 
 .sidebar-item-container:hover .sidebar-item-text,
@@ -247,7 +248,7 @@ section > hr:first-child {
 /* ── Links ──────────────────────────────────────────────────── */
 a {
   color: var(--blue) !important;
-  text-decoration: underline !important;
+  text-decoration: none !important;
   text-decoration-thickness: 1px !important;
   text-underline-offset: 0.16em !important;
   transition: color 0.18s !important;

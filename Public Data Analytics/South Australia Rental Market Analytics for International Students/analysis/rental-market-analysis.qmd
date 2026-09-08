@@ -2,7 +2,7 @@
 title: "Finding Home in South Australia"
 subtitle: "A Data-Driven Rental Guide for International Students Coming to South Australia"
 author: "Md Soad Solaiman"
-date: today
+date: "June 7, 2026"
 format:
   html:
     toc: true
