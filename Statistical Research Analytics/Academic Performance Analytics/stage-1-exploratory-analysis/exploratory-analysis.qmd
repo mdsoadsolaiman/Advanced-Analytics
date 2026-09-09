@@ -277,7 +277,7 @@ cutoff_table
 
 The Normal-model estimate of the 90th-percentile GPA is approximately **3.08**. The empirical 90th percentile is approximately **3.13**, meaning that 90% of observed GPAs are at or below this value under the empirical quantile definition. The estimates are close, but the empirical cutoff is approximately 0.05 GPA points higher. The difference should be understood as a model-versus-data discrepancy rather than evidence of a specific form of skewness.
 
-## Key Findings
+## Interpretation
 
 - Tutoring participation was less common than non-participation, with 721 students receiving tutoring and 1,671 not receiving tutoring.
 - The sample mean GPA was approximately **1.91**, the median was approximately **1.89**, and the standard deviation was approximately **0.92**.

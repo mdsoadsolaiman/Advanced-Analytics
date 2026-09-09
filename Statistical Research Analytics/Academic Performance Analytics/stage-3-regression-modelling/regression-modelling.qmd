@@ -499,12 +499,12 @@ $$+\ 0.457 \times \text{PS}_{\text{High}}
 
 All reported coefficients have (p\<2\times10\^{-16}). Each coefficient is interpreted as an adjusted in-sample association while holding the remaining included predictors constant:
 
-- **Intercept — 2.5934112:** fitted GPA for the reference profile at zero study hours and zero absences. This baseline is mathematically required but may not represent a typical student.
-- **Weekly study time — +0.0291188:** each additional weekly study hour is associated with an average GPA difference of approximately **+0.029 points**.
-- **Absences — −0.0993746:** each additional absence is associated with an average GPA difference of approximately **−0.099 points**.
-- **Tutoring — +0.2497705:** students receiving tutoring have an adjusted fitted GPA approximately **0.250 points** higher than students not receiving tutoring.
+- **Intercept : 2.5934112:** fitted GPA for the reference profile at zero study hours and zero absences. This baseline is mathematically required but may not represent a typical student.
+- **Weekly study time : +0.0291188:** each additional weekly study hour is associated with an average GPA difference of approximately **+0.029 points**.
+- **Absences : −0.0993746:** each additional absence is associated with an average GPA difference of approximately **−0.099 points**.
+- **Tutoring : +0.2497705:** students receiving tutoring have an adjusted fitted GPA approximately **0.250 points** higher than students not receiving tutoring.
 - **Parental support:** relative to no parental support, the adjusted fitted differences are approximately **+0.160** for Low, **+0.306** for Moderate, **+0.457** for High, and **+0.621** for Very High support.
-- **Extracurricular participation — +0.1871336:** participating students have an adjusted fitted GPA approximately **0.187 points** higher than non-participating students.
+- **Extracurricular participation : +0.1871336:** participating students have an adjusted fitted GPA approximately **0.187 points** higher than non-participating students.
 
 These coefficients quantify conditional associations within the analysed data. They do not establish causal effects.
 

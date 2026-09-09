@@ -1,0 +1,116 @@
+[1mdiff --git a/Business Analytics/Stadium Profitability and Investment Analytics/analysis/stadium-profitability-prediction.Rmd b/Business Analytics/Stadium Profitability and Investment Analytics/analysis/stadium-profitability-prediction.Rmd[m
+[1mindex dac0f89..188e030 100644[m
+[1m--- a/Business Analytics/Stadium Profitability and Investment Analytics/analysis/stadium-profitability-prediction.Rmd[m	
+[1m+++ b/Business Analytics/Stadium Profitability and Investment Analytics/analysis/stadium-profitability-prediction.Rmd[m	
+[36m@@ -2,102 +2,118 @@[m
+ title: "Carnac Menhirs Stadium Profitability Decision Support"[m
+ subtitle: "Classification Modelling and Operational Scenario Analysis"[m
+ author: "Md Soad Solaiman"[m
+[32m+[m[32mdate: "15 July 2025"[m
+ output:[m
+   html_document:[m
+     toc: true[m
+     toc_float: true[m
+     number_sections: false[m
+     theme: readable[m
+[32m+[m[32m    css: styles.css[m
+ ---[m
+ [m
+[31m-# Executive Summary[m
+[32m+[m[32m```{r setup, include=FALSE}[m
+[32m+[m[32mknitr::opts_chunk$set([m
+[32m+[m[32m  echo = FALSE,[m
+[32m+[m[32m  message = FALSE,[m
+[32m+[m[32m  warning = FALSE,[m
+[32m+[m[32m  fig.align = "center",[m
+[32m+[m[32m  fig.width = 8.5,[m
+[32m+[m[32m  fig.height = 5.25,[m
+[32m+[m[32m  dpi = 120[m
+[32m+[m[32m)[m
+[32m+[m[32m```[m
+ [m
+[31m-Carnac Menhirs has purchased an old basketball stadium and renamed it La Stade des Menhirs. The managing committee needs to assess whether the current first-season configuration is likely to be profitable and whether a practical operational change could improve that outlook.[m
+[32m+[m[32m```{r packages, include=FALSE}[m
+[32m+[m[32mlibrary(tidyverse)[m
+[32m+[m[32mlibrary(tidymodels)[m
+[32m+[m[32mlibrary(rpart.plot)[m
+[32m+[m[32mlibrary(vip)[m
+[32m+[m[32mlibrary(car)[m
+[32m+[m[32mlibrary(yardstick)[m
+[32m+[m[32mlibrary(kableExtra)[m
+[32m+[m[32mlibrary(scales)[m
+[32m+[m[32m```[m
+ [m
+[31m-The completed analysis uses 25,000 comparable club-season records to fit a classification tree and a logistic regression model. The current scenario—40 combined years of experience across seven players, 1,500 members, poor stadium condition, no recent premiership and a kiosk—is classified as not profitable by both models. The logistic model estimates a 41.78% probability of profit.[m
+[32m+[m[32m```{r scroll-table-helper, include=FALSE}[m
+[32m+[m[32m# Wraps a kable table in a fixed-height scroll box, so long or wide[m
+[32m+[m[32m# tables stay contained instead of stretching the page.[m
+[32m+[m[32mscroll_table <- function(kbl, height = "220px") {[m
+[32m+[m[32m  kbl %>%[m
+[32m+[m[32m    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),[m
+[32m+[m[32m                  full_width = FALSE) %>%[m
+[32m+[m[32m    scroll_box(width = "100%", height = height)[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mplain_table <- function(kbl) {[m
+[32m+[m[32m  kbl %>%[m
+[32m+[m[32m    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),[m
+[32m+[m[32m                  full_width = FALSE)[m
+[32m+[m[32m}[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m# 1. Executive Summary[m
+[32m+[m
+[32m+[m[32mCarnac Menhirs has purchased an old basketball stadium and renamed it La Stade des Menhirs. The managing committee needs to know whether the current first-season configuration is likely to be profitable, and whether one practical operational change could improve that outlook.[m
+[32m+[m
+[32m+[m[32mThe analysis fits a classification tree and a logistic regression model to 25,000 comparable club-season records. The current scenario, 40 combined years of experience across seven players, 1,500 members, poor stadium condition, no recent premiership and a kiosk, is classified as **not profitable** by both models. The logistic model estimates a 41.78% probability of profit.[m
+ [m
+[31m-Changing the café to a vending machine lowers the estimated probability to 31.66%. Changing it to a bar raises the probability to 54.41%, and both models classify the bar scenario as profitable. This is a modelled scenario result, not a guarantee of financial return, because conversion and operating costs are not included.[m
+[32m+[m[32mChanging the café to a vending machine lowers that estimate to 31.66%. Changing it to a bar raises it to 54.41%, and both models classify the bar scenario as profitable. This is a modelled scenario comparison, not a guarantee of financial return, since conversion and operating costs are not included in either model.[m
+ [m
+[31m-# Business Context[m
+[32m+[m[32m# 2. Business Context[m
+ [m
+[31m-Carnac Menhirs has assembled a new seven-player team with 40 combined years of experience. The club has acquired La Stade des Menhirs as its home venue. The stadium is in poor condition, 1,500 members have joined for the coming season and the proposed spectator-service format is a kiosk.[m
+[32m+[m[32mCarnac Menhirs has assembled a new seven-player team with 40 combined years of experience. The club's home venue, La Stade des Menhirs, is in poor condition. 1,500 members have joined for the coming season. The proposed spectator-service format is a kiosk.[m
+ [m
+[31m-The managing committee wants evidence on first-season profitability risk and a single operational change that could improve the modelled outcome. The intended audience is the non-technical committee, so modelling results are interpreted in operational and financial terms.[m
+[32m+[m[32mThe committee wants two things: evidence on first-season profitability risk, and a single operational change that could improve the modelled outcome. The intended audience is non-technical, so results below are interpreted in operational and financial terms throughout.[m
+ [m
+[31m-# Decision Problem[m
+[32m+[m[32m# 3. Decision Problem[m
+ [m
+[31m-The analysis addresses three management decisions:[m
+[32m+[m[32mThis analysis addresses three management decisions:[m
+ [m
+[31m-- whether the current stadium configuration is predicted to be profitable;[m
+[31m-- which club and venue factors are most relevant to that prediction; and[m
+[31m-- whether changing the café format improves the probability enough to justify detailed commercial assessment.[m
+[32m+[m[32m- Is the current stadium configuration predicted to be profitable?[m
+[32m+[m[32m- Which club and venue factors matter most to that prediction?[m
+[32m+[m[32m- Does changing the café format improve the probability enough to justify a detailed commercial assessment?[m
+ [m
+[31m-The models classify profitability and compare scenarios. They do not estimate the size of a profit or loss, and they do not include conversion costs.[m
+[32m+[m[32mThe models classify profitability and compare scenarios. They do not estimate the size of a profit or loss, and they do not account for conversion costs.[m
+ [m
+[31m-# Business Questions[m
+[32m+[m[32m# 4. Business Questions[m
+ [m
+ - How should profit be defined for comparable stadium-owning clubs?[m
+[31m-- Which operational variables appear most important in a classification tree?[m
+[31m-- Which individual factors and interactions contribute to the logistic model?[m
+[32m+[m[32m- Which operational variables matter most in a classification tree?[m
+[32m+[m[32m- Which individual factors and interactions matter in the logistic model?[m
+ - How accurately does the selected model classify held-out records?[m
+[31m-- What do sensitivity, specificity, ROC and AUC indicate about model reliability?[m
+[32m+[m[32m- What do sensitivity, specificity, ROC and AUC say about model reliability?[m
+ - Is La Stade des Menhirs predicted to make a first-season profit?[m
+ - How do vending-machine and bar scenarios change the predicted outcome?[m
+ - Which tested intervention offers the strongest modelled improvement?[m
+ [m
+[31m-# Dataset[m
+[32m+[m[32m# 5. Dataset[m
+ [m
+[31m-The included dataset contains 25,000 club-season records and seven source variables:[m
+[31m-[m
+[31m-- revenue and costs, measured in thousands of doll
