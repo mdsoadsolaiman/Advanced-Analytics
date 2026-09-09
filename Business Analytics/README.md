@@ -1,29 +1,16 @@
-# Business Analytics
+## Project Directory
 
-Performance, Revenue and Investment Decision Support
 
-## Overview
 
-This category demonstrates how analytical methods can support business decisions involving venue performance, revenue, player investment and stadium profitability.
+*Click the links in the projects*
 
-## Projects
 
-| Project | Decision Focus | Key Analytical Areas |
-|---|---|---|
-| [Venue Performance and Revenue Analytics](<Venue Performance and Revenue Analytics/>) | Venue performance and revenue optimisation | Attendance, revenue, match performance and comparative venue analysis |
-| [Player Investment and Performance Analytics](<Player Investment and Performance Analytics/>) | Player recruitment, salary and investment decisions | Player performance, compensation, value assessment and investment comparison |
-| [Stadium Profitability and Investment Analytics](<Stadium Profitability and Investment Analytics/>) | Stadium investment and profitability evaluation | Costs, revenue, profitability, utilisation and investment comparison |
 
-## Skills Demonstrated
+|Category|Project|Primary Focus|
+|-|-|-|
+|Business Analytics|[Venue Performance and Revenue Analytics](https://venue-performance-analysis.netlify.app)|Venue performance, attendance and revenue decision support|
+|Business Analytics|[Player Investment and Performance Analytics](https://player-investment-analysis.netlify.app)|Player performance, compensation and investment evaluation|
+|Business Analytics|[Stadium Profitability and Investment Analytics](https://stadium-profitability-and-investment.netlify.app)|Stadium profitability, utilisation and investment analysis|
 
-- Business analytics
-- KPI analysis
-- Financial comparison
-- Investment analysis
-- Decision support
-- Data visualisation
-- Stakeholder communication
 
-## Navigation
 
-- [Advanced Analytics Portfolio](../README.md)
