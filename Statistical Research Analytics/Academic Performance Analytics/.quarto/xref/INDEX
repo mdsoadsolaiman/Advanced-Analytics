@@ -1,5 +1,11 @@
 {
   "stage-3-regression-modelling/regression-modelling.qmd": {
     "regression-modelling.html": "ab33d597"
+  },
+  "stage-1-exploratory-analysis/exploratory-analysis.qmd": {
+    "exploratory-analysis.html": "bab3a956"
+  },
+  "stage-2-statistical-inference/statistical-inference.qmd": {
+    "statistical-inference.html": "6ff93b41"
   }
 }

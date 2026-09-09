@@ -1,14 +1,18 @@
 ---
-title: "Student Performance Analytics: Regression Modelling"
+title: "Student Performance: Regression Modelling"
 subtitle: "Explaining GPA Through Behavioural and Educational Factors"
 author: "Md Soad Solaiman"
-format: html
+date: "19 April 2026"
+format:
+  html:
+    css: styles.css
+    toc: true
 editor: visual
 ---
 
 ## Executive Summary
 
-This report examines statistical associations between student characteristics and GPA using simple and multiple linear regression. Two simple models evaluate weekly study time and absences separately. A multiple regression model then combines study time, absences, tutoring, parental support, and extracurricular participation.
+This study examines statistical associations between student characteristics and GPA using simple and multiple linear regression. Two simple models evaluate weekly study time and absences separately. A multiple regression model then combines study time, absences, tutoring, parental support, and extracurricular participation.
 
 Weekly study time has a positive but weak in-sample association with GPA. The model explains approximately **3.2%** of observed GPA variation. Absences have a much stronger negative association with GPA, explaining approximately **84.5%** of observed variation in the corresponding simple model.
 
@@ -674,10 +678,64 @@ These results establish stronger in-sample explanatory performance for the multi
 
 ## Limitations
 
-The data are observational, so regression coefficients describe associations and cannot establish causation. Omitted variables and other confounding factors may contribute to the reported relationships. The sampling design is not documented, limiting assessment of independence and generalisability.
+The data are observational, so regression coefficients describe associations and cannot establish causation. Omitted variables and other confounding factors may contribute to the reported relationships.
 
-GPA is bounded between 0 and 4, while ordinary linear regression is unbounded. The models may therefore produce implausible fitted or extrapolated values, particularly near the scale boundaries. Linearity, constant variance, residual Normality, and independence are modelling assumptions that are only partly assessable through the available diagnostics.
+Linearity, constant variance, residual Normality, and independence are modelling assumptions that are only partly assessable through the available diagnostics.
 
-Model evaluation is entirely in sample. No train/test split, cross-validation, holdout evaluation, or external validation was performed. Consequently, (R\^2), adjusted (R\^2), residual standard error, and observed-versus-fitted plots should not be interpreted as estimates of future predictive performance.
+Model evaluation is entirely in sample. No train/test split, cross-validation, holdout evaluation, or external validation was performed.
 
-The final predictor specification is retained from the completed analysis. This report does not evaluate alternative model-selection strategies, interactions, nonlinear relationships, or model forms designed specifically for bounded outcomes.
+## Appendix: Data Description
+
+This appendix defines every variable in the dataset. It includes the coded values used for categorical fields. It is here so codes such as `GradeClass` values or `Ethnicity` categories can be understood without outside documentation.
+
+### Student identifier
+
+- **StudentID**: A unique identifier assigned to each student, ranging from 1001 to 3392. This field identifies individual records only and is not used as an analytical variable.
+
+### Demographic details
+
+- **Age**: Student age in years, ranging from 15 to 18.
+- **Gender**: 0 = Male, 1 = Female.
+- **Ethnicity**:
+  - 0 = Caucasian
+  - 1 = African American
+  - 2 = Asian
+  - 3 = Other
+- **ParentalEducation**:
+  - 0 = None
+  - 1 = High School
+  - 2 = Some College
+  - 3 = Bachelor's
+  - 4 = Higher
+
+### Study habits
+
+- **StudyTimeWeekly**: Weekly study time, ranging from 0 to 20 hours.
+- **Absences**: Number of school absences, ranging from 0 to 30.
+- **Tutoring**: 0 = No tutoring, 1 = Received tutoring.
+
+### Parental involvement
+
+- **ParentalSupport**:
+  - 0 = None
+  - 1 = Low
+  - 2 = Moderate
+  - 3 = High
+  - 4 = Very High
+
+### Extracurricular activities
+
+- **Extracurricular**: 0 = No, 1 = Yes.
+- **Sports**: 0 = No, 1 = Yes.
+- **Music**: 0 = No, 1 = Yes.
+- **Volunteering**: 0 = No, 1 = Yes.
+
+### Academic performance
+
+- **GPA**: Grade point average, ranging from 0 to 4.
+- **GradeClass**: The letter grade corresponding to a student's GPA, defined as follows:
+  - 0 = **A** (GPA ≥ 3.5)
+  - 1 = **B** (3.0 ≤ GPA \< 3.5)
+  - 2 = **C** (2.5 ≤ GPA \< 3.0)
+  - 3 = **D** (2.0 ≤ GPA \< 2.5)
+  - 4 = **F** (GPA \< 2.0)

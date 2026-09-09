@@ -1,14 +1,18 @@
 ---
-title: "Student Performance Analytics: Statistical Inference"
+title: "Student Performance: Statistical Inference"
 subtitle: "Evaluating Group Differences and Academic Associations"
 author: "Md Soad Solaiman"
-format: html
+date: "26 March 2026"
+format:
+  html:
+    css: styles.css
+    toc: true
 editor: visual
 ---
 
 ## Executive Summary
 
-This report applies statistical inference to examine how GPA and grade classification vary across selected student characteristics. The analysis retains a **90% confidence level** and corresponding **10% significance level** throughout.
+This study applies statistical inference to examine how GPA and grade classification vary across selected student characteristics. The analysis retains a **90% confidence level** and corresponding **10% significance level** throughout.
 
 Mean GPA differed across parental-support categories, and the one-way ANOVA provided strong evidence that at least one population mean was different. Tukey-adjusted comparisons identified statistically significant differences for most pairs, with two exceptions: Moderate versus Low support and Very High versus High support.
 
@@ -84,7 +88,7 @@ All inferential decisions use:
 
 - confidence level: **90%**;
 - significance level: **10%**; and
-- decision threshold: \(p < 0.10\).
+- decision threshold: (p \< 0.10).
 
 A statistically significant result indicates evidence against the relevant null hypothesis under the adopted model assumptions. It does not by itself establish practical importance or causation.
 
@@ -94,14 +98,10 @@ A statistically significant result indicates evidence against the relevant null 
 
 The analysis evaluates whether population mean GPA differs across the five parental-support categories.
 
-$$
-H_0: \mu_{\text{None}} = \mu_{\text{Low}} = \mu_{\text{Moderate}} =
-\mu_{\text{High}} = \mu_{\text{Very High}}
-$$
+$$H_0: \mu_{\text{None}} = \mu_{\text{Low}} = \mu_{\text{Moderate}} =
+\mu_{\text{High}} = \mu_{\text{Very High}}$$
 
-$$
-H_1: \text{At least one parental-support category has a different population mean GPA.}
-$$
+$$H_1: \text{At least one parental-support category has a different population mean GPA.}$$
 
 ### Descriptive Evidence
 
@@ -201,7 +201,7 @@ anova_result <- summary(anova_model)
 anova_result
 ```
 
-The ANOVA produced \(F(4,2387)=22.72\) with \(p<2\times10^{-16}\). At the 10% significance level, the null hypothesis is rejected. The sample provides strong evidence that population mean GPA is not equal across all parental-support categories.
+The ANOVA produced (F(4,2387)=22.72) with (p\<2\times10\^{-16}). At the 10% significance level, the null hypothesis is rejected. The sample provides strong evidence that population mean GPA is not equal across all parental-support categories.
 
 This result establishes a statistical difference among group means under the model assumptions. It does not identify which groups differ and does not show that parental support caused the observed differences.
 
@@ -216,10 +216,10 @@ Tukey HSD provides multiplicity-adjusted pairwise comparisons with a 90% family-
 
 At the 10% significance level, two comparisons were not statistically significant:
 
-- **Moderate − Low:** estimated difference \(0.1285\), adjusted \(p=0.1018\), with a 90% interval spanning zero;
-- **Very High − High:** estimated difference \(0.1491\), adjusted \(p=0.1572\), with a 90% interval spanning zero.
+- **Moderate − Low:** estimated difference (0.1285), adjusted (p=0.1018), with a 90% interval spanning zero;
+- **Very High − High:** estimated difference (0.1491), adjusted (p=0.1572), with a 90% interval spanning zero.
 
-All other reported parental-support pairwise comparisons had adjusted \(p<0.10\). These findings describe differences in mean GPA across support categories but should not be interpreted causally.
+All other reported parental-support pairwise comparisons had adjusted (p\<0.10). These findings describe differences in mean GPA across support categories but should not be interpreted causally.
 
 ## Ethnicity and GPA
 
@@ -227,14 +227,10 @@ All other reported parental-support pairwise comparisons had adjusted \(p<0.10\)
 
 The analysis evaluates whether population mean GPA differs across the four ethnicity categories represented in the dataset.
 
-$$
-H_0: \mu_{\text{Caucasian}} = \mu_{\text{African American}} =
-\mu_{\text{Asian}} = \mu_{\text{Other}}
-$$
+$$H_0: \mu_{\text{Caucasian}} = \mu_{\text{African American}} =
+\mu_{\text{Asian}} = \mu_{\text{Other}}$$
 
-$$
-H_1: \text{At least one ethnicity category has a different population mean GPA.}
-$$
+$$H_1: \text{At least one ethnicity category has a different population mean GPA.}$$
 
 ### Descriptive Evidence
 
@@ -344,7 +340,7 @@ ethnicity_anova_model <- aov(GPA ~ EthnicityF, data = student_data)
 summary(ethnicity_anova_model)
 ```
 
-The ANOVA produced \(F(3,2388)=0.958\) with \(p=0.412\). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence that population mean GPA differs across the ethnicity categories represented in the sample.
+The ANOVA produced (F(3,2388)=0.958) with (p=0.412). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence that population mean GPA differs across the ethnicity categories represented in the sample.
 
 This result is compatible with no population-level difference at the selected significance level, but it does not prove that all population means are identical.
 
@@ -354,13 +350,9 @@ This result is compatible with no population-level difference at the selected si
 
 The analysis compares population mean GPA for male and female students using the pooled equal-variance two-sample t-test specified in the source analysis.
 
-$$
-H_0: \mu_{\text{Male}} = \mu_{\text{Female}}
-$$
+$$H_0: \mu_{\text{Male}} = \mu_{\text{Female}}$$
 
-$$
-H_1: \mu_{\text{Male}} \neq \mu_{\text{Female}}
-$$
+$$H_1: \mu_{\text{Male}} \neq \mu_{\text{Female}}$$
 
 ### Descriptive Evidence
 
@@ -468,7 +460,7 @@ t_test_gender <- t.test(GPA ~ GenderF,
 t_test_gender
 ```
 
-The pooled two-sample t-test produced \(t(2390)=0.6532\) with \(p=0.5137\). The estimated mean GPAs were **1.918679** for male students and **1.894225** for female students. The 90% confidence interval for the male-minus-female mean difference was **−0.03715 to 0.08606**.
+The pooled two-sample t-test produced (t(2390)=0.6532) with (p=0.5137). The estimated mean GPAs were **1.918679** for male students and **1.894225** for female students. The 90% confidence interval for the male-minus-female mean difference was **−0.03715 to 0.08606**.
 
 The interval includes zero, and the p-value exceeds 0.10. The null hypothesis is therefore not rejected. The sample does not provide sufficient evidence of a population mean GPA difference between male and female students at the selected significance level. This is not proof that the population means are exactly equal.
 
@@ -478,13 +470,9 @@ The interval includes zero, and the p-value exceeds 0.10. The null hypothesis is
 
 The analysis evaluates whether parental education and grade classification are associated in the population represented by the sample.
 
-$$
-H_0: \text{Parental education and grade classification are independent.}
-$$
+$$H_0: \text{Parental education and grade classification are independent.}$$
 
-$$
-H_1: \text{Parental education and grade classification are associated.}
-$$
+$$H_1: \text{Parental education and grade classification are associated.}$$
 
 ### Descriptive Evidence
 
@@ -577,23 +565,77 @@ All expected cell counts exceed 5, satisfying the conventional expected-count co
 chisq_pe
 ```
 
-The test produced \(\chi^2(16)=14.882\) with \(p=0.5333\). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence of an association between parental education and grade classification at the selected significance level.
+The test produced (\chi\^2(16)=14.882) with (p=0.5333). Because the p-value exceeds 0.10, the null hypothesis is not rejected. The analysis did not provide sufficient evidence of an association between parental education and grade classification at the selected significance level.
 
 This result is compatible with independence under the model but does not prove that the variables are independent in the population.
 
 ## Key Findings
 
-- Mean GPA differed statistically across parental-support categories: \(F(4,2387)=22.72\), \(p<2\times10^{-16}\).
+- Mean GPA differed statistically across parental-support categories: (F(4,2387)=22.72), (p\<2\times10\^{-16}).
 - Tukey HSD identified significant differences for most parental-support pairs. Moderate versus Low and Very High versus High were not significant at the 10% level.
-- The ethnicity ANOVA did not provide sufficient evidence of differing population mean GPA: \(F(3,2388)=0.958\), \(p=0.412\).
-- The pooled gender t-test did not provide sufficient evidence of a population mean GPA difference: \(t(2390)=0.6532\), \(p=0.5137\), with a 90% confidence interval of **−0.03715 to 0.08606**.
-- The chi-squared analysis did not provide sufficient evidence of an association between parental education and grade classification: \(\chi^2(16)=14.882\), \(p=0.5333\).
+- The ethnicity ANOVA did not provide sufficient evidence of differing population mean GPA: (F(3,2388)=0.958), (p=0.412).
+- The pooled gender t-test did not provide sufficient evidence of a population mean GPA difference: (t(2390)=0.6532), (p=0.5137), with a 90% confidence interval of **−0.03715 to 0.08606**.
+- The chi-squared analysis did not provide sufficient evidence of an association between parental education and grade classification: (\chi\^2(16)=14.882), (p=0.5333).
 - Non-significant findings represent insufficient evidence against the null hypotheses, not proof of equality or independence.
 
 ## Limitations
 
-The dataset is observational, so the reported group differences and associations do not establish causality. Potential confounding variables may contribute to the observed relationships. The sampling design is not documented in the available material, which limits verification of random sampling, observational independence, and generalisability beyond the analysed records.
+The dataset is observational, so the reported group differences and associations do not establish causality. Potential confounding variables may contribute to the observed relationships.
 
 The selected 10% significance level permits a higher false-positive probability than the more commonly used 5% threshold. Several hypotheses and pairwise comparisons are examined, creating multiple-testing considerations; Tukey HSD controls family-wise confidence for the parental-support post-hoc comparisons, but the report does not apply a single adjustment across all separate research questions.
 
-Statistical significance does not by itself establish practical importance. Formal effect-size measures were not included in the original analysis, so the magnitude and practical relevance of group differences are not evaluated systematically. Visual diagnostics support approximate distributional assumptions, but they do not prove exact Normality, equal variance, or independence.
+## Appendix: Data Description
+
+This appendix defines every variable in the dataset. It includes the coded values used for categorical fields. It is here so codes such as `GradeClass` values or `Ethnicity` categories can be understood without outside documentation.
+
+### Student identifier
+
+- **StudentID**: A unique identifier assigned to each student, ranging from 1001 to 3392. This field identifies individual records only and is not used as an analytical variable.
+
+### Demographic details
+
+- **Age**: Student age in years, ranging from 15 to 18.
+- **Gender**: 0 = Male, 1 = Female.
+- **Ethnicity**:
+  - 0 = Caucasian
+  - 1 = African American
+  - 2 = Asian
+  - 3 = Other
+- **ParentalEducation**:
+  - 0 = None
+  - 1 = High School
+  - 2 = Some College
+  - 3 = Bachelor's
+  - 4 = Higher
+
+### Study habits
+
+- **StudyTimeWeekly**: Weekly study time, ranging from 0 to 20 hours.
+- **Absences**: Number of school absences, ranging from 0 to 30.
+- **Tutoring**: 0 = No tutoring, 1 = Received tutoring.
+
+### Parental involvement
+
+- **ParentalSupport**:
+  - 0 = None
+  - 1 = Low
+  - 2 = Moderate
+  - 3 = High
+  - 4 = Very High
+
+### Extracurricular activities
+
+- **Extracurricular**: 0 = No, 1 = Yes.
+- **Sports**: 0 = No, 1 = Yes.
+- **Music**: 0 = No, 1 = Yes.
+- **Volunteering**: 0 = No, 1 = Yes.
+
+### Academic performance
+
+- **GPA**: Grade point average, ranging from 0 to 4.
+- **GradeClass**: The letter grade corresponding to a student's GPA, defined as follows:
+  - 0 = **A** (GPA ≥ 3.5)
+  - 1 = **B** (3.0 ≤ GPA \< 3.5)
+  - 2 = **C** (2.5 ≤ GPA \< 3.0)
+  - 3 = **D** (2.0 ≤ GPA \< 2.5)
+  - 4 = **F** (GPA \< 2.0)
