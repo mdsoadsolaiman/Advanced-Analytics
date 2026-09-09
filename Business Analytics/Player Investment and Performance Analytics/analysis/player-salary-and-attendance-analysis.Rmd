@@ -1,6 +1,6 @@
 ---
 title: "Carnac Menhirs Player Investment and Performance Analytics"
-subtitle: "Salary, Attendance and Goal-Shooting Decision Support"
+subtitle: "Salary, Crowd and Goal-Shooting Decision Support"
 author: "Md Soad Solaiman"
 date: "7 June 2025"
 output:
@@ -46,7 +46,7 @@ scroll_table <- function(kbl, height = "280px") {
 
 # 1. Executive Summary
 
-Carnac Menhirs is a proposed team in an upcoming French professional netball league. The management committee and treasurer are evaluating player remuneration under a venue income-sharing arrangement. Higher attendance contributes directly to team income under this arrangement. This report examines salary patterns across positions. It then focuses on Goal Shooters, where salary, attendance and shooting accuracy are analysed together.
+Carnac Menhirs is a proposed team in an upcoming French professional netball league. The management committee and treasurer are evaluating player remuneration under a venue income-sharing arrangement. Higher crowd contributes directly to team income under this arrangement. This report examines salary patterns across positions. It then focuses on Goal Shooters, where salary, crowd and shooting accuracy are analysed together.
 
 All dollar figures are Australian dollars.
 
@@ -58,7 +58,7 @@ Age and salary distributions are similar across positions. Goal Attack and Goal 
 
 Carnac Menhirs allocates salary across seven positions: Goal Shooter, Goal Attack, Wing Attack, Centre, Wing Defence, Goal Defence and Goal Keeper. Only Goal Shooter and Goal Attack score goals. Goal Shooter is the more direct scoring position. Management believes stronger players may lift scoring, spectator demand and commercial return.
 
-The data can test associations between salary, attendance and performance. It cannot estimate income per game or full financial return. No revenue, venue-sharing percentage or cost data is available.
+The data can test associations between salary, crowd and performance. It cannot estimate income per game or full financial return. No revenue, venue-sharing percentage or cost data is available.
 
 # 3. Investment Decision
 
@@ -67,15 +67,15 @@ The committee and treasurer must decide how much weight this analysis should car
 # 4. Analytical Questions
 
 - Compare player age and salary distributions across positions.
-- Test salary against experience and average attendance.
-- Analyse Goal Shooter salary, attendance and shooting accuracy together.
+- Test salary against experience and average crowd.
+- Analyse Goal Shooter salary, crowd and shooting accuracy together.
 - Transform non-linear relationships and fit a linear model.
 - Check model assumptions and produce salary-based predictions with 97% intervals.
 - Separate evidence useful for recruitment from evidence too weak for a financial commitment.
 
 # 5. Dataset
 
-The source is a de-identified player-season dataset. It contains 14,000 rows and nine variables: player identifier, date of birth, height, playing experience, salary, position, goals, misses and average attendance. Salary is expressed in purchasing-power-adjusted Australian dollars. A player may appear in multiple seasons under different identifiers.
+The source is a de-identified player-season dataset. It contains 14,000 rows and nine variables: player identifier, date of birth, height, playing experience, salary, position, goals, misses and average crowd. Salary is expressed in purchasing-power-adjusted Australian dollars. A player may appear in multiple seasons under different identifiers.
 
 ```{r load-data, include=FALSE}
 nb1 <- read_csv("../data/nbplayers_1.csv", show_col_types = FALSE)
@@ -146,7 +146,7 @@ Player identifiers are unique, with `r n_dup_ids` duplicates found. The review r
 
 ```{r validate-numeric-fields}
 negative_value_summary <- tibble(
-  field = c("Experience", "Salary", "Goals", "Misses", "Average attendance"),
+  field = c("Experience", "Salary", "Goals", "Misses", "Average crowd"),
   `Negative records` = c(
     nrow(filter(nb1, PE < 0)),
     nrow(filter(nb1, salary < 0)),
@@ -163,7 +163,7 @@ knitr::kable(
   scroll_table(height = "180px")
 ```
 
-No remaining field contains negative values. The lowest and highest values for height, experience, misses and attendance were also checked directly. No further errors were found.
+No remaining field contains negative values. The lowest and highest values for height, experience, misses and crowd were also checked directly. No further errors were found.
 
 ```{r prepare-analysis-variables, include=FALSE}
 nb1 <- rename(
@@ -174,7 +174,7 @@ nb1 <- rename(
   position = pos,
   goals = GOALS,
   misses = missed,
-  avg_attendance = avg_attend
+  avg_crowd = avg_attend
 )
 
 nb1 <- nb1 %>%
@@ -188,7 +188,7 @@ nb1 <- nb1 %>%
     position = as.factor(position),
     goals = as.integer(goals),
     misses = as.integer(misses),
-    avg_attendance = as.numeric(avg_attendance)
+    avg_crowd = as.numeric(avg_crowd)
   )
 
 nb1 <- mutate(
@@ -213,11 +213,11 @@ knitr::kable(
 
 # 7. Player Profile by Position
 
-## 7.1 Height and attendance
+## 7.1 Height and crowd
 
 ```{r height-skew, include=FALSE}
 height_skew <- round(moments::skewness(nb1$Height), 4)
-attend_skew <- round(moments::skewness(nb1$avg_attendance), 4)
+attend_skew <- round(moments::skewness(nb1$avg_crowd), 4)
 ```
 
 Player height is close to symmetric, with a skewness of `r height_skew`. It centres around 1.80 metres.
@@ -231,13 +231,13 @@ hist(
 )
 ```
 
-Average attendance is right-skewed, with a skewness of `r attend_skew`. Most matches draw between 2,000 and 5,000 attendees, with occasional larger crowds.
+Average crowd is right-skewed, with a skewness of `r attend_skew`. Most matches draw between 2,000 and 5,000 attendees, with occasional larger crowds.
 
-```{r attendance-distribution}
+```{r crowd-distribution}
 hist(
-  nb1$avg_attendance,
-  main = "Distribution of Average Match Attendance",
-  xlab = "Average attendance",
+  nb1$avg_crowd,
+  main = "Distribution of Average Match crowd",
+  xlab = "Average crowd",
   col = "lightgreen"
 )
 ```
@@ -270,7 +270,7 @@ ggplot(nb1, aes(x = position, y = salary, fill = position)) +
   )
 ```
 
-## 7.3 Salary against experience and attendance
+## 7.3 Salary against experience and crowd
 
 Salary shows no clear relationship with experience, in any position.
 
@@ -285,15 +285,15 @@ ggplot(nb1, aes(x = experience, y = salary)) +
   )
 ```
 
-Salary and attendance show no clear pattern for most positions. Goal Shooter is the exception. It shows a clear positive trend.
+Salary and crowd show no clear pattern for most positions. Goal Shooter is the exception. It shows a clear positive trend.
 
-```{r salary-and-attendance-by-position}
-ggplot(nb1, aes(x = avg_attendance, y = salary)) +
+```{r salary-and-crowd-by-position}
+ggplot(nb1, aes(x = avg_crowd, y = salary)) +
   geom_point(alpha = 0.6, color = "lightgreen") +
   facet_wrap(~ position) +
   labs(
-    title = "Player Salary versus Average Attendance by Position",
-    x = "Average attendance",
+    title = "Player Salary versus Average crowd by Position",
+    x = "Average crowd",
     y = "Salary (AUD thousands)"
   )
 ```
@@ -328,28 +328,28 @@ knitr::kable(
   scroll_table(height = "200px")
 ```
 
-## 8.1 Salary and attendance
+## 8.1 Salary and Crowd
 
-Attendance rises with Goal Shooter salary. The trend is positive, but curved. A straight line does not fully capture its shape.
+Crowd rise with Goal Shooter salary. The trend is positive, but curved. A straight line does not fully capture its shape.
 
-```{r goal-shooter-salary-and-attendance}
-ggplot(netball_gs_sample, aes(x = salary, y = avg_attendance)) +
+```{r goal-shooter-salary-and-crowd}
+ggplot(netball_gs_sample, aes(x = salary, y = avg_crowd)) +
   geom_point(alpha = 0.6, color = "darkred") +
   geom_smooth(method = "lm", se = FALSE, color = "blue") +
   labs(
-    title = "Goal Shooter Salary versus Average Attendance",
+    title = "Goal Shooter Salary versus Average crowd",
     x = "Salary (AUD thousands)",
-    y = "Average attendance"
+    y = "Average crowd"
   )
 ```
 
 # 9. Transformations
 
-## 9.1 Attendance
+## 9.1 Crowd
 
-```{r attendance-box-cox, include=FALSE}
+```{r crowd-box-cox, include=FALSE}
 df_bc <- BoxCoxTrans(
-  y = netball_gs_sample$avg_attendance,
+  y = netball_gs_sample$avg_crowd,
   x = netball_gs_sample$salary,
   lambda = seq(-7, 7, 0.0025),
   na.rm = TRUE
@@ -357,21 +357,21 @@ df_bc <- BoxCoxTrans(
 
 netball_gs_sample <- mutate(
   netball_gs_sample,
-  tf_att = predict(df_bc, netball_gs_sample$avg_attendance)
+  tf_att = predict(df_bc, netball_gs_sample$avg_crowd)
 ) %>%
-  relocate(tf_att, .after = avg_attendance)
+  relocate(tf_att, .after = avg_crowd)
 ```
 
-The Box-Cox procedure selects a lambda of `r round(df_bc$lambda, 4)` for attendance. This is close to 1, so the transformed relationship looks much like the original.
+The Box-Cox procedure selects a lambda of `r round(df_bc$lambda, 4)` for crowd. This is close to 1, so the transformed relationship looks much like the original.
 
-```{r transformed-attendance-and-salary}
+```{r transformed-crowd-and-salary}
 ggplot(netball_gs_sample, aes(x = salary, y = tf_att)) +
   geom_point(alpha = 0.6, color = "purple") +
   geom_smooth(method = "lm", se = FALSE, color = "blue") +
   labs(
-    title = "Goal Shooter Salary versus Transformed Attendance",
+    title = "Goal Shooter Salary versus Transformed crowd",
     x = "Salary (AUD thousands)",
-    y = "Transformed attendance"
+    y = "Transformed crowd"
   )
 ```
 
@@ -551,13 +551,13 @@ At AUD 300,000, predicted accuracy is 97.7%, with a 97% prediction interval of a
 
 # 13 Management interpretation
 
-Higher-paid Goal Shooters show greater accuracy and attendance in this sample. The coefficient, its significance and the model fit support a real in-sample association. This does not establish that salary causes either outcome. The AUD 330,000 scenario reflects the highest salary prediction for shooter whose accuracy is 100%.
+Higher-paid Goal Shooters show greater accuracy and crowd in this sample. The coefficient, its significance and the model fit support a real in-sample association. This does not establish that salary causes either outcome. The AUD 330,000 scenario reflects the highest salary prediction for shooter whose accuracy is 100%.
 
 
 
 # 14. Conclusion
 
-Based on the analysis of the netball player dataset, specially focusing on Goal Shooters (GS), several key findings have identified. The analysis shows a strong positive relationship between a Goal Shooter’s salary and their performance metrics.Also, shooting accuracy and audience attendance has a strong positive relation. Specifically, higher salaries tend to correlate with better shooting accuracy and increased average crowd attendance. Thus it indicates that higher-paid players not only perform better but also attract more spectators. These insights suggest that investing in top-performing, higher-salaried Goal Shooters could yield both performance and financial returns.
+Based on the analysis of the netball player dataset, specially focusing on Goal Shooters (GS), several key findings have identified. The analysis shows a strong positive relationship between a Goal Shooter’s salary and their performance metrics.Also, shooting accuracy and audience crowd has a strong positive relation. Specifically, higher salaries tend to correlate with better shooting accuracy and increased average crowd. Thus it indicates that higher-paid players not only perform better but also attract more spectators. These insights suggest that investing in top-performing, higher-salaried Goal Shooters could yield both performance and financial returns.
 
 But Carnac Menhirs should be strategic in his recruitment. Though the club is ready to pay upto $500k to a single while the average budget is 120k USD. The suggestion is that, if the club recruited a player (GS) of 100% accuracy capability, It should not be paid more than 330K USD. 
 
@@ -572,7 +572,7 @@ This is a specification limitation, not a flaw in the underlying relationship. T
 
 - Use the model to compare scenarios and screen recruits, not to set a final contract figure.
 - Do not treat AUD 330,000 as a recommended salary.
-- Collect attendance-linked revenue and cost data before approving any salary above AUD 120,000.
+- Collect crowd-linked revenue and cost data before approving any salary above AUD 120,000.
 - Treat predictions near 100% as a sign the model has reached its practical limit.
 
 # 16. Risks and Limitations
@@ -592,10 +592,10 @@ This is a specification limitation, not a flaw in the underlying relationship. T
 - `position`: playing position.
 - `goals`: successful goal attempts.
 - `misses`: missed goal attempts.
-- `avg_attendance`: average match attendance.
+- `avg_crowd`: average match crowd.
 - `age_y`: derived player age, in years.
 - `accuracy`: goals divided by total attempts.
-- `tf_att`: Box-Cox transformed attendance.
+- `tf_att`: Box-Cox transformed crowd.
 - `tf_acc`: Box-Cox transformed shooting accuracy.
 
 ## 17.2 References
