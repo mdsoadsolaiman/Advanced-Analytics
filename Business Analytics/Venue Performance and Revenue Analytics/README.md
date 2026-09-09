@@ -2,7 +2,7 @@
 
 
 
-*Click the links in the projects*
+Click the links in the projects
 
 
 

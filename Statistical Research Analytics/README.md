@@ -2,7 +2,7 @@
 
 
 
-\*Click the links in the projects\*
+*Click the links in the projects*
 
 |Category|Projects|Primary Focus|
 |-|-|-|
@@ -20,6 +20,4 @@
 * Research reporting
 * R
 * Quarto
-
-
 

@@ -2,11 +2,11 @@
 
 
 
-*Click the links in the projects*
+Click the links in the projects
 
 
 
-|Category|Project|Primary Focus|
+|Category|Projects|Primary Focus|
 |-|-|-|
 |Business Analytics|[Stadium Profitability and Investment Analytics](https://stadium-profitability-and-investment.netlify.app)|Stadium profitability, utilisation and investment analysis|
 

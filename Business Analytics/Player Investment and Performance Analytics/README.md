@@ -6,7 +6,7 @@
 
 
 
-|Category|Project|Primary Focus|
+|Category|Projects|Primary Focus|
 |-|-|-|
 |Business Analytics|[Venue Performance and Revenue Analytics](https://venue-performance-analysis.netlify.app)|Venue performance, attendance and revenue decision support|
 

@@ -1,6 +1,12 @@
 ## Project Directory
 
-|Category|Project|Primary Focus|
+
+
+*Click the links in the projects*
+
+
+
+|Category|Projects|Primary Focus|
 |-|-|-|
 |Business Analytics|[Venue Performance and Revenue Analytics](https://venue-performance-analysis.netlify.app)|Venue performance, attendance and revenue decision support|
 |Business Analytics|[Player Investment and Performance Analytics](https://player-investment-analysis.netlify.app)|Player performance, compensation and investment evaluation|
@@ -10,10 +16,10 @@
 
 ## Technical Skills Demonstrated
 
-* R | Data cleaning and transformation | Exploratory data analysis
-* Statistical inference | Hypothesis testing | Regression modelling
-* Model diagnostics | Business analytics | KPI analysis
-* Investment analysis | Public-data analysis | Geographic comparison
-* Data visualization | Quarto reporting | Shiny development
-* Interactive decision support | Analytical communication
+* R  |  Data cleaning and transformation  |  Exploratory data analysis
+* Statistical inference  |  Hypothesis testing  |  Regression modelling
+* Model diagnostics  |  Business analytics  | KPI analysis
+* Investment analysis  |  Public-data analysis  |  Geographic comparison
+* Data visualization  |  Quarto reporting  |  Shiny development
+* Interactive decision support  |  Analytical communication
 
