@@ -1,0 +1,341 @@
+---
+title: "Student Performance: Exploratory Analysis"
+subtitle: "Understanding Student Characteristics, Academic Outcomes, and Initial Relationships"
+author: "Md Soad Solaiman"
+date: "7 March 2026"
+format:
+  html:
+    css: styles.css
+    toc: true
+editor: visual
+---
+
+## Executive Summary
+
+This study examines at student performance using descriptive statistics and distribution analysis. It also compares outcomes across tutoring groups. The dataset has 2,392 high school student records. It covers demographics, study habits, parental involvement, extracurricular activities, and academic outcomes.
+
+Within this sample, 721 students received tutoring. 1,671 did not. Students receiving tutoring had higher median and mean GPAs. They also had larger proportions of A and B grades. These are associations in the observed sample. They do not show that tutoring caused the differences.
+
+The GPA distribution is roughly balanced around its centre. The mean is approximately **1.91**. The median is approximately **1.89**. A Normal model gives a useful approximation for the central part of the distribution. The Q-Q plot shows departures in both tails, though. The Normal-model estimate for the proportion below a GPA of 2.5 is approximately **74.2%**. The observed proportion is approximately **70.5%**. The 90th-percentile estimates are approximately **3.08** under the Normal model and **3.13** empirically.
+
+## Dataset Overview
+
+The analysis uses the dataset at `data/student-performance-data.csv`. Each row is one student. The dataset includes demographic characteristics, study behaviours, extracurricular participation, parental involvement, GPA, and grade classification.
+
+The exploratory work focuses on tutoring participation, GPA, and grade classification. It summarises individual distributions. It compares outcomes across tutoring groups. It also checks how well a Normal distribution approximates GPA for probability and percentile calculations.
+
+## Variable Classification
+
+| Variable        | Variable classification | R data representation |
+|-----------------|-------------------------|-----------------------|
+| Age             | Quantitative discrete   | Integer               |
+| Gender          | Categorical nominal     | Factor                |
+| StudyTimeWeekly | Quantitative continuous | Double                |
+| Absences        | Quantitative discrete   | Integer               |
+| GPA             | Quantitative continuous | Double                |
+| GradeClass      | Categorical ordinal     | Ordered factor        |
+
+## Exploratory Data Analysis
+
+### Tutoring Participation
+
+```{r}
+
+student_data <- read.csv("data/student-performance-data.csv")
+
+
+student_data$Tutoring <- factor(student_data$Tutoring,
+                                levels = c(0, 1),
+                                labels = c("No Tutoring", "Tutoring"))
+
+table(student_data$Tutoring)
+```
+
+```{r}
+
+tutoring_counts <- table(student_data$Tutoring)
+
+barplot(tutoring_counts,
+        main = "Student Participation in Tutoring",
+        xlab = "Tutoring Status",
+        ylab = "Number of Students",
+        ylim = c(0, 2000),
+        yaxp = c(0, 2000, 4),
+        col = c("#2563A6", "#0F766E"),
+        border = "black")
+```
+
+Tutoring participation was less common in the sample. 1,671 students did not receive tutoring. 721 students did. The non-tutoring group was more than twice the size of the tutoring group.
+
+## Distribution Analysis
+
+### GPA Distribution
+
+```{r}
+hist(student_data$GPA,
+     main = "Distribution of Student GPA",
+     xlab = "Grade Point Average",
+     ylab = "Number of Students",
+     col = "#0F766E",
+     border = "black",
+     breaks = 50,
+     xlim = c(0, 4),
+     ylim = c(0, 120),
+     yaxp = c(0, 120, 6),
+     cex.main = 1.3,
+     cex.lab = 1.2,
+     cex.axis = 1.1)
+```
+
+```{r}
+
+gpa_summary <- data.frame(
+  Statistic = c("Mean", "Standard Deviation", "Median", "IQR"),
+  Value = c(
+    mean(student_data$GPA),
+    sd(student_data$GPA),
+    median(student_data$GPA),
+    IQR(student_data$GPA)
+  )
+)
+
+gpa_summary
+
+
+```
+
+The histogram shows a roughly balanced distribution around the centre. The mean and median are close, which suggests limited central skew. This does not mean the distribution is perfectly symmetric or exactly Normal.
+
+```{r}
+
+boxplot(student_data$GPA,
+        main = "GPA Distribution and Potential Outliers",
+        sub = "Based on 2,392 High School Students",
+        ylab = "Grade Point Average",
+        xlab = "All Students",
+        ylim = c(0, 4.5),
+        col = "#DCEAF4",
+        border = "#17324D",
+        outline = TRUE,
+        cex.main = 1.3,
+        cex.lab = 1.1,
+        cex.axis = 1)
+
+```
+
+The sample has a mean GPA of approximately **1.91**. The standard deviation is approximately **0.92**. The median is approximately **1.89**. Since the mean and median are close, the mean and standard deviation are useful summaries of centre and spread here. The boxplot does not flag any prominent outliers under its standard plotting rule. This is a visual check only. It is not proof that unusual observations are absent.
+
+## Relationships Between Variables
+
+### Tutoring Status and Grade Classification
+
+```{r}
+
+student_data$GradeClass <- factor(student_data$GradeClass,
+                                  levels = c(0, 1, 2, 3, 4),
+                                  labels = c("A", "B", "C", "D", "F"))
+
+
+tutoring_grade_table <- table(student_data$Tutoring, student_data$GradeClass)
+tutoring_grade_table
+```
+
+```{r}
+
+prop.table(tutoring_grade_table, margin = 1)
+```
+
+```{r}
+
+tutoring_grade_pct <- prop.table(tutoring_grade_table, margin = 1) * 100
+
+barplot(tutoring_grade_pct,
+        beside = TRUE,
+        main = "Grade Classification by Tutoring Status",
+        xlab = "Grade Classification (A = Highest, F = Lowest)",
+        ylab = "Students Within Tutoring Group (%)",
+        col = c("#2563A6", "#C65D21"),
+        border = "black",
+        ylim = c(0, 65),
+        yaxp = c(0, 60, 6),
+        space = c(0.1, 0.6),
+        cex.main = 1.3,
+        cex.lab = 1.2,
+        cex.axis = 1.1,
+        cex.names = 1.1,
+        legend.text = c("No Tutoring", "Tutoring"),
+        args.legend = list(title = "Tutoring Status",
+                           x = "topleft",
+                           bty = "n",
+                           cex = 1.0))
+
+
+```
+
+Grade distributions differed between the two tutoring groups. An A grade went to **7.2%** of tutored students. Only **3.3%** of non-tutored students got an A. The tutoring group also had a larger share of B grades.
+
+An F grade went to **45.6%** of tutored students and **52.8%** of non-tutored students. These differences point to an association between tutoring status and grade classification. They do not prove a causal effect. The analysis does not control for other characteristics that may differ between the groups.
+
+### GPA Across Tutoring Groups
+
+```{r}
+
+boxplot(GPA ~ Tutoring, 
+        data = student_data,
+        main = "GPA Distribution by Tutoring Status",
+        xlab = "Tutoring Status",
+        ylab = "Grade Point Average",
+        col = c("#2563A6", "#C65D21"),
+        border = "black",
+        notch = FALSE,
+        outpch = 19,
+        outcol = "gray30")
+
+# Summary statistics by group
+tapply(student_data$GPA, student_data$Tutoring, summary)
+
+```
+
+Students receiving tutoring had a median GPA of approximately **2.10**. Students not receiving tutoring had a median of approximately **1.82**. The mean GPAs were close to this, at approximately **2.11** and **1.82**. The boxes are similar in size. This means the spread within each group is roughly comparable.
+
+The sample shows higher central GPA values among tutored students. This is a descriptive comparison only. It does not account for other variables that may differ between groups. It does not show that tutoring caused the difference.
+
+## Normality Assessment
+
+```{r}
+qqnorm(student_data$GPA,
+       main = "Normal Q-Q Plot of Student GPA",
+       xlab = "Theoretical Normal Quantiles",
+       ylab = "Observed GPA Quantiles",
+       pch = 19,
+       col = "#0F766E",
+       cex = 0.8,
+       cex.main = 1.3,
+       cex.lab = 1.2,
+       cex.axis = 1.1)
+
+qqline(student_data$GPA,
+       col = "#C65D21",
+       lwd = 2)
+```
+
+The central observations in the Q-Q plot follow the reference line fairly closely. This holds especially between theoretical quantiles of about −1 and 1. Both tails show departures, though. This means the full GPA distribution is not exactly Normal. The Normal distribution gives a reasonable approximation for the central part of the data. Probability and percentile estimates from it should still be checked against empirical results.
+
+## Probability Analysis
+
+This uses the sample mean and standard deviation as estimates. It compares a Normal-model probability with the observed proportion.
+
+```{r}
+
+gpa_mean <- mean(student_data$GPA)
+gpa_sd <- sd(student_data$GPA)
+
+
+prob_gpa_less_2_5 <- pnorm(2.5, mean = gpa_mean, sd = gpa_sd)
+
+empirical_prob <- sum(student_data$GPA < 2.5) / nrow(student_data)
+
+
+probability_table <- data.frame(
+  Measure = c("Sample Mean (GPA)",
+              "Sample SD (GPA)",
+              "P(GPA < 2.5) [Normal Model]",
+              "P(GPA < 2.5) [Empirical Proportion]"),
+  Value = c(gpa_mean, gpa_sd, prob_gpa_less_2_5, empirical_prob)
+)
+
+probability_table
+```
+
+Under the fitted Normal model, the probability of a GPA below 2.5 is approximately **0.742**, or **74.2%**. The observed proportion is approximately **0.705**, or **70.5%**. Both numbers show that most students in the sample have a GPA below 2.5. The Normal model estimates a proportion about 3.7 percentage points higher than the empirical calculation, though. This gap matches the tail departures seen in the Q-Q plot.
+
+## Percentile Analysis
+
+```{r}
+
+
+normal_cutoff <- qnorm(0.90, mean = gpa_mean, sd = gpa_sd)
+
+empirical_cutoff <- quantile(student_data$GPA, 0.90)
+
+
+cutoff_table <- data.frame(
+  Method = c("Normal Model (90th percentile)", "Empirical (90th percentile)"),
+  GPA_Cutoff = c(normal_cutoff, empirical_cutoff)
+)
+
+cutoff_table
+```
+
+The Normal-model estimate of the 90th-percentile GPA is approximately **3.08**. The empirical 90th percentile is approximately **3.13**. That means 90% of observed GPAs sit at or below this value, under the empirical definition. The two estimates are close. The empirical cutoff is about 0.05 GPA points higher, though. This gap is a model-versus-data difference. It is not evidence of a specific type of skewness.
+
+## Interpretation
+
+- Tutoring participation was less common than non-participation, with 721 students receiving tutoring and 1,671 not receiving tutoring.
+- The sample mean GPA was approximately **1.91**, the median was approximately **1.89**, and the standard deviation was approximately **0.92**.
+- Students receiving tutoring exhibited higher mean and median GPAs and larger proportions of A and B grades within the sample.
+- The central portion of the GPA distribution was reasonably approximated by a Normal distribution, while both tails departed from the Normal reference.
+- The Normal model estimated that **74.2%** of students had a GPA below 2.5, compared with an observed proportion of **70.5%**.
+- The Normal-model and empirical 90th-percentile GPAs were approximately **3.08** and **3.13**, respectively.
+
+## Limitations
+
+This analysis is descriptive. It does not establish causal relationships. Comparisons by tutoring status do not adjust for study time, attendance, parental support, prior performance, or other possible confounders. The sample design is not evaluated here. It is unclear how far these findings generalise beyond these records.
+
+GPA is bounded between 0 and 4. A Normal distribution is unbounded. The Normal model gives a useful central approximation. But the tail departures and the gaps from empirical estimates show it does not fully capture the observed distribution. Probability and percentile estimates should be read alongside their empirical counterparts.
+
+## Appendix: Data Description
+
+This appendix defines every variable in the dataset. It includes the coded values used for categorical fields. It is here so codes such as `GradeClass` values or `Ethnicity` categories can be understood without outside documentation.
+
+### Student identifier
+
+- **StudentID**: A unique identifier assigned to each student, ranging from 1001 to 3392. This field identifies individual records only and is not used as an analytical variable.
+
+### Demographic details
+
+- **Age**: Student age in years, ranging from 15 to 18.
+- **Gender**: 0 = Male, 1 = Female.
+- **Ethnicity**:
+  - 0 = Caucasian
+  - 1 = African American
+  - 2 = Asian
+  - 3 = Other
+- **ParentalEducation**:
+  - 0 = None
+  - 1 = High School
+  - 2 = Some College
+  - 3 = Bachelor's
+  - 4 = Higher
+
+### Study habits
+
+- **StudyTimeWeekly**: Weekly study time, ranging from 0 to 20 hours.
+- **Absences**: Number of school absences, ranging from 0 to 30.
+- **Tutoring**: 0 = No tutoring, 1 = Received tutoring.
+
+### Parental involvement
+
+- **ParentalSupport**:
+  - 0 = None
+  - 1 = Low
+  - 2 = Moderate
+  - 3 = High
+  - 4 = Very High
+
+### Extracurricular activities
+
+- **Extracurricular**: 0 = No, 1 = Yes.
+- **Sports**: 0 = No, 1 = Yes.
+- **Music**: 0 = No, 1 = Yes.
+- **Volunteering**: 0 = No, 1 = Yes.
+
+### Academic performance
+
+- **GPA**: Grade point average, ranging from 0 to 4.
+- **GradeClass**: The letter grade corresponding to a student's GPA, defined as follows:
+  - 0 = **A** (GPA ≥ 3.5)
+  - 1 = **B** (3.0 ≤ GPA \< 3.5)
+  - 2 = **C** (2.5 ≤ GPA \< 3.0)
+  - 3 = **D** (2.0 ≤ GPA \< 2.5)
+  - 4 = **F** (GPA \< 2.0)

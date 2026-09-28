@@ -1,0 +1,409 @@
+/* ================================================================
+   Student Performance Analytics: Exploratory Analysis
+   Professional Quarto report stylesheet
+================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ── Design tokens ──────────────────────────────────────────── */
+:root {
+  --navy:       #193751;
+  --navy-soft:  #193751;
+  --paper:      #faf9f6;
+  --panel:      #f5f8fa;
+  --rule:       #d9e2ea;
+  --accent:     #c9973f;
+  --accent-bg:  #fbf3e3;
+  --blue:       #193751;
+  --blue-bg:    #eaf2fa;
+  --teal:       #193751;
+  --teal-bg:    #ecf8f5;
+  --orange:     #c65d21;
+  --orange-bg:  #fff3e8;
+  --ink:        #1c2333;
+  --muted:      #5f6f7f;
+}
+
+/* ── Base typography ────────────────────────────────────────── */
+body {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+main.content {
+  max-width: 900px !important;
+}
+
+/* ── Title block ────────────────────────────────────────────── */
+#title-block-header,
+.quarto-title-block {
+  background: var(--navy) !important;
+  color: #ffffff !important;
+  padding: 34px 40px 28px !important;
+  margin: 0 0 1.6rem !important;
+  border-radius: 10px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+#title-block-header::before,
+.quarto-title-block::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 18% 70%, rgba(201,151,63,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, rgba(37,99,166,0.22) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+#title-block-header::after {
+  content: 'STUDENT PERFORMANCE ANALYTICS';
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.quarto-title h1.title,
+#title-block-header h1.title {
+  font-family: 'Inter', sans-serif !important;
+  font-size: clamp(28px, 4vw, 38px) !important;
+  font-weight: 750 !important;
+  color: #ffffff !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 12px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.quarto-title .subtitle,
+.subtitle.lead {
+  font-family: 'Source Serif 4', serif !important;
+  font-size: 18px !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  color: #c7d3de !important;
+  line-height: 1.5 !important;
+  margin-top: 0 !important;
+  position: relative;
+  z-index: 1;
+}
+
+.quarto-title-meta {
+  border-top: 1px solid rgba(255,255,255,0.15) !important;
+  padding-top: 20px !important;
+  margin-top: 22px !important;
+  position: relative;
+  z-index: 1;
+}
+
+.quarto-title-meta-heading {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 2.2px !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,0.5) !important;
+  margin-bottom: 4px !important;
+}
+
+.quarto-title-meta-contents p {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.85) !important;
+  margin: 0 !important;
+}
+
+/* ── Table of contents (margin sidebar) ───────────────────────
+   Position/layout left completely untouched — only colors, fonts
+   and spacing are styled here, since Quarto's margin-sidebar
+   mechanism is different from R Markdown's toc_float and its
+   layout behaviour was not something I could verify by rendering. */
+#TOC {
+  font-family: 'Inter', sans-serif !important;
+}
+
+#TOC #toc-title,
+nav[role="doc-toc"] h2 {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 2.5px !important;
+  text-transform: uppercase !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid var(--rule) !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 10px !important;
+}
+
+#TOC .nav-link,
+nav[role="doc-toc"] a {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12.5px !important;
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  line-height: 1.6 !important;
+  padding: 4px 8px !important;
+  border-radius: 5px !important;
+  display: block !important;
+}
+
+#TOC .nav-link:hover {
+  background: var(--accent-bg) !important;
+  color: var(--blue) !important;
+}
+
+#TOC .nav-link.active {
+  background: var(--blue-bg) !important;
+  color: var(--blue) !important;
+  font-weight: 600 !important;
+}
+
+/* Style the section numbers Quarto already inserts.
+   This does NOT add numbering — it only colors the existing
+   <span class="header-section-number"> elements to match the
+   heading text color itself. */
+.header-section-number {
+  color: var(--navy) !important;
+  font-weight: 700 !important;
+  margin-right: 8px;
+}
+
+#TOC .header-section-number {
+  color: currentColor !important;
+  font-weight: 600 !important;
+  margin-right: 4px;
+  font-size: 11px !important;
+}
+
+/* ── Headings ───────────────────────────────────────────────── */
+h2 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: var(--navy) !important;
+  margin-top: 1.8rem !important;
+  margin-bottom: 0.6rem !important;
+  padding-bottom: 0.35rem !important;
+  border-bottom: 2px solid var(--navy) !important;
+  letter-spacing: -0.01em !important;
+}
+
+h3 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--blue) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 1.3rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+h4 {
+  font-family: 'Inter', sans-serif !important;
+  color: var(--navy) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Paragraphs & lists ─────────────────────────────────────── */
+p {
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+  color: var(--ink) !important;
+  margin-bottom: 0.7em !important;
+}
+
+ul, ol {
+  padding-left: 26px !important;
+}
+
+li {
+  font-size: 16.5px !important;
+  line-height: 1.68 !important;
+  color: var(--ink) !important;
+  margin-bottom: 4px !important;
+}
+
+strong { color: var(--navy) !important; font-weight: 700 !important; }
+em     { color: var(--muted) !important; }
+
+/* ── Links ──────────────────────────────────────────────────── */
+a {
+  color: var(--blue) !important;
+  text-underline-offset: 0.15em !important;
+}
+a:hover { color: var(--navy) !important; }
+
+/* ── Inline code ────────────────────────────────────────────── */
+code {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 13.5px !important;
+  background: var(--panel) !important;
+  padding: 1px 6px !important;
+  border-radius: 3px !important;
+  color: var(--navy) !important;
+}
+
+/* ── Colored callout panel — Key Findings only ─────────────── */
+/* Executive Summary and Limitations are now plain sections,
+   styled identically to Dataset Overview and every other
+   section — no box, no border, no background tint. */
+section#key-findings {
+  margin-top: 1.6rem !important;
+  padding: 1.3rem 1.5rem 1.4rem !important;
+  border: 1px solid var(--rule) !important;
+  border-left-width: 5px !important;
+  border-radius: 8px !important;
+  background: var(--teal-bg) !important;
+  border-left-color: var(--teal) !important;
+}
+
+section#key-findings > h2 {
+  margin-top: 0 !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+.table-responsive,
+table {
+  width: 100% !important;
+}
+
+table {
+  border-collapse: collapse !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  margin: 1.4rem 0 !important;
+  background: #ffffff !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+thead th {
+  background: var(--navy) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  letter-spacing: 0.6px !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  padding: 10px 16px !important;
+  border: none !important;
+  vertical-align: middle !important;
+}
+
+tbody td,
+tbody th {
+  padding: 9px 16px !important;
+  border-bottom: 1px solid var(--rule) !important;
+  color: var(--ink) !important;
+  vertical-align: top !important;
+}
+
+tbody tr:last-child td { border-bottom: none !important; }
+tbody tr:nth-child(even) { background: var(--panel) !important; }
+tbody tr:hover { background: var(--blue-bg) !important; }
+
+caption,
+.table-caption {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  color: var(--muted) !important;
+  text-align: left !important;
+  padding: 4px 0 10px !important;
+  caption-side: top !important;
+}
+
+/* ── Figures ────────────────────────────────────────────────── */
+figure {
+  margin: 2rem 0 !important;
+}
+
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+
+figcaption,
+.quarto-figure-center > figcaption {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  color: var(--muted) !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+  margin-top: 8px !important;
+}
+
+/* ── Code-fold panels ───────────────────────────────────────── */
+details.code-fold {
+  margin: 1rem 0 1.4rem !important;
+  border: 1px solid var(--rule) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  overflow: hidden;
+}
+
+details.code-fold > summary {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+  color: var(--navy) !important;
+  padding: 10px 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+
+pre {
+  border: 1px solid var(--rule) !important;
+  border-radius: 6px !important;
+  background: #fbfcfd !important;
+}
+
+.callout {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+/* ── Horizontal rule ────────────────────────────────────────── */
+hr {
+  border: none !important;
+  border-top: 1px solid var(--rule) !important;
+  margin: 1.8rem 0 !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 991px) {
+  main.content {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body { font-size: 15.5px !important; }
+  #title-block-header,
+  .quarto-title-block {
+    padding: 28px 22px 22px !important;
+  }
+  .quarto-title h1.title {
+    font-size: 24px !important;
+  }
+  section#key-findings {
+    padding: 1rem 1.1rem !important;
+  }
+}
